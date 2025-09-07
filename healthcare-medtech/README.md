@@ -13,6 +13,8 @@ The dot point list below introduces individual files and folders and their purpo
 
 4. [supabase_schemas](/healthcare-medtech/supabase_schemas/): This folder contains the Supabase Schemas for the database, essentially how information is stored in the database of which the workflows access. You must edit the workflows to read the database.
 
+5. [SRS Patient Record Summary..pdf](/healthcare-medtech/SRS%20Patient%20Record%20Summarisation.pdf): This is the Software Requirement Specification document which describes the purpose of the software, the description of the software, the requirements and needs of the software, and the links between user stories.
+
 5. SOON TO COME: Installation Video
 6. SOON TO COME: Demonstration Videos - transcription and record summary
 7. SOON TO COME: Survey responses
