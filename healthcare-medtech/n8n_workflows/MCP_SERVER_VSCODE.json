@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"MedTech-MCPServer": {
+			"url": "https://griycor.app.n8n.cloud/mcp/114fbb03-3046-40ae-b4eb-c78b3d6e32dd",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

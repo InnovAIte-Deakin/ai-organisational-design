@@ -1,0 +1,86 @@
+{
+  "name": "MCP Server Testing",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "114fbb03-3046-40ae-b4eb-c78b3d6e32dd"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f1bdd6a8-3962-480e-899f-f4698513a872",
+      "name": "MCP Server Trigger",
+      "webhookId": "114fbb03-3046-40ae-b4eb-c78b3d6e32dd"
+    },
+    {
+      "parameters": {
+        "description": "Get a summary of the patient's history, dental notes and scans.",
+        "workflowId": {
+          "__rl": true,
+          "value": "ZJyJH6zf2wrmTFbv",
+          "mode": "list",
+          "cachedResultName": "MedTech MCP"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "record_id": 1
+          },
+          "matchingColumns": [
+            "record_id"
+          ],
+          "schema": [
+            {
+              "id": "record_id",
+              "displayName": "record_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        224
+      ],
+      "id": "cdb65532-1d06-4cb3-860b-33e0bfbf9830",
+      "name": "Create Record Summary"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Create Record Summary": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e815a787-294a-4bd1-baf9-bb60e54694fc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d4b45c4bfc930a30cf723717401a9f283a24972514643d562a20d54a9eb11ac8"
+  },
+  "id": "Uj8R5ot3hyumYqsJ",
+  "tags": []
+}
