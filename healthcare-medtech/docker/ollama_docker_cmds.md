@@ -11,5 +11,5 @@
 
 ## Notes
 
-1. -p 11434:11434 opens port 11434 on the container for Ollama.
+1. `-p 11434:11434` opens port 11434 on the container for Ollama.
 2. If you want to access docker hosted applications in another docker container, you need to use `host.docker.internal:PORT`.
