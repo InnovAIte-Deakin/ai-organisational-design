@@ -54,5 +54,5 @@ async def main(server_url: str):
 			print("Summary was returned!" if summary is not None else "Summary could not be made!")
 
 if __name__ == "__main__":
-	MCP_SERVER_URL = "https://griycor.app.n8n.cloud/mcp-test/9cb4d576-7df4-4f23-82eb-59ce51f7cbd5"
+	MCP_SERVER_URL = "http://localhost:5678/mcp-test/9cb4d576-7df4-4f23-82eb-59ce51f7cbd5"
 	asyncio.run(main(MCP_SERVER_URL))
