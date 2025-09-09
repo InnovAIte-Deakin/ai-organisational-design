@@ -16,3 +16,4 @@
 2. `GENERIC_TIMEZONE="Australia/Darwin"` and `TZ="Australia/Darwin` are to set the timezone for nodes / global
 3. Within a docker container application, if you want to access the host's network on opened ports, you need to use `host.docker.internal:PORT`. Requires the port to be open via the `-p` argument.
 4. Add the `-it --rm ` flag after `docker run` to make the terminal interactive and when the terminal closes, the container is removed as well. Data is saved as it reads from the drive.
+5. There is a API available to local-hosted n8n instances at the url `http://localhost:5678/api/v1/docs/#/`
