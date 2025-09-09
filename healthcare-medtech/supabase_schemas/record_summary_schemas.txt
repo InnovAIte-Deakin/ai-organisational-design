@@ -1,0 +1,100 @@
+
+Base Individal Record:
+- unique_id
+- creation_date
+- first_name
+- last_name
+- date_of_birth (DD-MM-YYYY)
+- identficiation_num
+- email_primary
+- address_primary
+- address_secondary
+- phone_number
+- is_employee
+
+Dental Staff Record (is_employee=True):
+- unique_record_id
+- individual_id
+- background_id
+
+Dentist Notes:
+- unique_id
+- individual_id
+- creation_date
+- title
+- text
+- appointment_id (optional)
+
+Appointment History:
+- unique_id
+- individual_id
+- creation_date
+- appointed_date
+- was_attended
+- attendant_id
+- assistant_1_id
+- assistant_2_id
+
+Summaries:
+- unique_id
+- individual_id
+- staff_id
+- hash
+- summary
+- version
+- creation_date
+
+----
+
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.Appointment History (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  individual_id bigint NOT NULL,
+  creation_date timestamp with time zone NOT NULL DEFAULT now(),
+  appointed_date timestamp without time zone NOT NULL,
+  was_attended boolean NOT NULL DEFAULT false,
+  attendant_id bigint NOT NULL,
+  assistant_1_id bigint,
+  assistant_2_id bigint,
+  CONSTRAINT Appointment History_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.Dentist Notes (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  individual_id bigint NOT NULL,
+  created_date timestamp with time zone NOT NULL DEFAULT now(),
+  title character varying NOT NULL,
+  text text NOT NULL,
+  appointment_id bigint,
+  CONSTRAINT Dentist Notes_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.Individuals (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+  created_date timestamp with time zone NOT NULL DEFAULT now(),
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  date_of_birth date NOT NULL,
+  identification_num character varying NOT NULL,
+  email_primary character varying NOT NULL,
+  address_primary character varying NOT NULL,
+  address_secondary character varying,
+  phone_number character varying NOT NULL,
+  is_employee boolean NOT NULL DEFAULT false,
+  CONSTRAINT Individuals_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.Staff (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  individual_id bigint NOT NULL,
+  background_id character varying NOT NULL,
+  CONSTRAINT Staff_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.Summaries (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  individual_id bigint NOT NULL,
+  hash character varying NOT NULL,
+  summary text NOT NULL,
+  version bigint NOT NULL,
+  created_date timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT Summaries_pkey PRIMARY KEY (id)
+);

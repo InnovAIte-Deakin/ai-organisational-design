@@ -24,7 +24,7 @@
     {
       "parameters": {
         "operation": "get",
-        "tableId": "Patient Record Data",
+        "tableId": "Individuals",
         "filters": {
           "conditions": [
             {
@@ -58,7 +58,7 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "patient_id",
+              "keyName": "individual_id",
               "condition": "eq",
               "keyValue": "={{ $('Patient Record').item.json.id }}"
             }
@@ -89,7 +89,7 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "patient_id",
+              "keyName": "individual_id",
               "condition": "eq",
               "keyValue": "={{ $json.id }}"
             }
@@ -114,7 +114,7 @@
     },
     {
       "parameters": {
-        "model": "gpt-oss:120b",
+        "model": "gpt-oss:20b",
         "options": {
           "temperature": 0.6,
           "numCtx": 8192
@@ -229,8 +229,8 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "data_hash",
-              "keyValue": "={{ $json.data }}"
+              "keyName": "hash",
+              "keyValue": "={{ $('Hashing').item.json.data }}"
             }
           ]
         }
@@ -291,12 +291,12 @@
         "fieldsUi": {
           "fieldValues": [
             {
-              "fieldId": "data_hash",
+              "fieldId": "hash",
               "fieldValue": "={{ $('Hashing').item.json.data }}"
             },
             {
-              "fieldId": "record_id",
-              "fieldValue": "={{ $('Combine to Structured').item.json['Dentist Notes'][0].json.id }}"
+              "fieldId": "individual_id",
+              "fieldValue": "={{ $('Combine to Structured').item.json['Dentist Notes'][0].json.individual_id }}"
             },
             {
               "fieldId": "summary",
@@ -433,7 +433,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Can you summarize the following data into a summary? Separate each appointment by staff, each dentist note by date, and general information about the patient.\n{{ $('Stringify').item.json.result }}",
+        "text": "=You are a clinical summarization assistant. Using the following data:\n\n{{ $('Stringify').item.json.result }}\n\nGenerate a structured, clinic-focused summary of the patient's recent dental history.\n\n1. **General Patient Information**\n   - Summarize demographics (full name, date of birth, ID number, address, phone).\n\n2. **Appointments (Organized by Staff)**\n   - Group appointments by each staff member involved.\n   - For each, list: appointment date, role (attendant/assistant), attendance status, and collaborating staff.\n\n3. **Dentist Notes (Chronological)**\n   - Present notes in order of occurrence.\n   - For each entry, include: appointment type, clinical findings, treatments performed, and changes compared to prior visits.\n   - Be detailed\n\n4. **Overall Clinical Summary**\n   - Provide a concise narrative overview of the patient's dental course.\n   - Highlight recurring conditions, treatment progress, and outcomes.\n   - Identify areas needing follow-up or monitoring.\n   - Be detailed\n\nFormat the output for **professional use in a dental clinic**, emphasizing clarity, conciseness, and clinical relevance.",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -465,7 +465,7 @@
     "When Executed by Another Workflow": [
       {
         "json": {
-          "record_id": 1
+          "record_id": 4
         }
       }
     ]
@@ -656,7 +656,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "774e441a-f93a-437b-92c4-09925e206551",
+  "versionId": "caaca303-da4c-40a9-adcf-91a5e92de686",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d4b45c4bfc930a30cf723717401a9f283a24972514643d562a20d54a9eb11ac8"
