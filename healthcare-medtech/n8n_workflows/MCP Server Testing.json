@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "path": "114fbb03-3046-40ae-b4eb-c78b3d6e32dd"
+        "path": "9cb4d576-7df4-4f23-82eb-59ce51f7cbd5"
       },
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
@@ -11,13 +11,12 @@
         0,
         0
       ],
-      "id": "f1bdd6a8-3962-480e-899f-f4698513a872",
+      "id": "4beafe45-1a3e-4c77-83cf-66879c250ec6",
       "name": "MCP Server Trigger",
-      "webhookId": "114fbb03-3046-40ae-b4eb-c78b3d6e32dd"
+      "webhookId": "9cb4d576-7df4-4f23-82eb-59ce51f7cbd5"
     },
     {
       "parameters": {
-        "description": "Get a summary of the patient's history, dental notes and scans.",
         "workflowId": {
           "__rl": true,
           "value": "ZJyJH6zf2wrmTFbv",
@@ -27,7 +26,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "record_id": 1
+            "record_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('record_id', ``, 'number') }}"
           },
           "matchingColumns": [
             "record_id"
@@ -52,15 +51,15 @@
       "typeVersion": 2.2,
       "position": [
         144,
-        224
+        208
       ],
-      "id": "cdb65532-1d06-4cb3-860b-33e0bfbf9830",
-      "name": "Create Record Summary"
+      "id": "725e2d09-c386-447a-91a0-6892db08271f",
+      "name": "Patient Record Summary"
     }
   ],
   "pinData": {},
   "connections": {
-    "Create Record Summary": {
+    "Patient Record Summary": {
       "ai_tool": [
         [
           {
@@ -76,7 +75,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "e815a787-294a-4bd1-baf9-bb60e54694fc",
+  "versionId": "bee42fae-cf29-4f02-a9bd-1536aa5b58bd",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d4b45c4bfc930a30cf723717401a9f283a24972514643d562a20d54a9eb11ac8"

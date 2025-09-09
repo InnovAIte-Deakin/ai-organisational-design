@@ -3,14 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "record_id",
-              "type": "number"
-            }
-          ]
-        }
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"record_id\": 1\n}"
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -187,7 +181,7 @@
           "conditions": [
             {
               "id": "b006841d-31ce-4341-9e7c-a4e7f02faa08",
-              "leftValue": "={{ $items(\"Patient Record\").length !== 0 }}",
+              "leftValue": "={{ $items(\"Patient Record\")[0].json.isNotEmpty() }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -208,19 +202,6 @@
       ],
       "id": "8e17318c-d148-4621-a230-c8e026630562",
       "name": "Check if Record Exists"
-    },
-    {
-      "parameters": {
-        "errorMessage": "The patient record does not exist with id:"
-      },
-      "type": "n8n-nodes-base.stopAndError",
-      "typeVersion": 1,
-      "position": [
-        560,
-        144
-      ],
-      "id": "9acd1a8c-31c4-4da9-9373-921cacff037b",
-      "name": "Record does not exist!"
     },
     {
       "parameters": {
@@ -350,88 +331,6 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "f99b61f6-ff92-444c-af4e-a6b358d7366c",
-              "name": "summary",
-              "value": "={{ $json.summary }}",
-              "type": "string"
-            },
-            {
-              "id": "4bf2e483-b5a4-481c-9cb1-c7670f664a50",
-              "name": "record_id",
-              "value": "={{ $json.record_id }}",
-              "type": "number"
-            },
-            {
-              "id": "17cc05da-bb4b-43da-bf31-d4ee7cc796cd",
-              "name": "hash",
-              "value": "={{ $json.data_hash }}",
-              "type": "string"
-            },
-            {
-              "id": "e8c18774-183d-4d31-b856-d141fbedb72a",
-              "name": "creation_date",
-              "value": "={{ $json.created_at }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1744,
-        -96
-      ],
-      "id": "334422df-e788-435e-99eb-578e6f86cea0",
-      "name": "Set Output 1"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "f99b61f6-ff92-444c-af4e-a6b358d7366c",
-              "name": "summary",
-              "value": "={{ $json.summary }}",
-              "type": "string"
-            },
-            {
-              "id": "4bf2e483-b5a4-481c-9cb1-c7670f664a50",
-              "name": "record_id",
-              "value": "={{ $json.record_id }}",
-              "type": "number"
-            },
-            {
-              "id": "17cc05da-bb4b-43da-bf31-d4ee7cc796cd",
-              "name": "hash",
-              "value": "={{ $json.data_hash }}",
-              "type": "string"
-            },
-            {
-              "id": "e8c18774-183d-4d31-b856-d141fbedb72a",
-              "name": "creation_date",
-              "value": "={{ $json.created_at }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        2192,
-        48
-      ],
-      "id": "30f3e984-e275-46bd-b785-24204cfc5efa",
-      "name": "Set Output "
-    },
-    {
-      "parameters": {
         "promptType": "define",
         "text": "=You are a clinical summarization assistant. Using the following data:\n\n{{ $('Stringify').item.json.result }}\n\nGenerate a structured, clinic-focused summary of the patient's recent dental history.\n\n1. **General Patient Information**\n   - Summarize demographics (full name, date of birth, ID number, address, phone).\n\n2. **Appointments (Organized by Staff)**\n   - Group appointments by each staff member involved.\n   - For each, list: appointment date, role (attendant/assistant), attendance status, and collaborating staff.\n\n3. **Dentist Notes (Chronological)**\n   - Present notes in order of occurrence.\n   - For each entry, include: appointment type, clinical findings, treatments performed, and changes compared to prior visits.\n   - Be detailed\n\n4. **Overall Clinical Summary**\n   - Provide a concise narrative overview of the patient's dental course.\n   - Highlight recurring conditions, treatment progress, and outcomes.\n   - Identify areas needing follow-up or monitoring.\n   - Be detailed\n\nFormat the output for **professional use in a dental clinic**, emphasizing clarity, conciseness, and clinical relevance.",
         "hasOutputParser": true,
@@ -459,13 +358,26 @@
       ],
       "id": "993f9a19-3e98-4c63-b36b-1cfc71a36d12",
       "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "errorMessage": "The record does not exist!"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        560,
+        176
+      ],
+      "id": "6ae0a4bc-8c8c-43f7-b692-cf82cc6a75d9",
+      "name": "Stop and Error"
     }
   ],
   "pinData": {
     "When Executed by Another Workflow": [
       {
         "json": {
-          "record_id": 4
+          "record_id": 1
         }
       }
     ]
@@ -560,7 +472,7 @@
         ],
         [
           {
-            "node": "Record does not exist!",
+            "node": "Stop and Error",
             "type": "main",
             "index": 0
           }
@@ -569,13 +481,7 @@
     },
     "Check if Summary Already Made": {
       "main": [
-        [
-          {
-            "node": "Set Output 1",
-            "type": "main",
-            "index": 0
-          }
-        ],
+        [],
         [
           {
             "node": "Basic LLM Chain",
@@ -620,13 +526,7 @@
     },
     "Store Summary Output": {
       "main": [
-        [
-          {
-            "node": "Set Output ",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Basic LLM Chain": {
@@ -654,9 +554,10 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "any"
   },
-  "versionId": "caaca303-da4c-40a9-adcf-91a5e92de686",
+  "versionId": "4e00040d-3fba-4bf9-80eb-d0b9e77cf6eb",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d4b45c4bfc930a30cf723717401a9f283a24972514643d562a20d54a9eb11ac8"
