@@ -12,5 +12,4 @@
 ## Notes
 
 1. `-p 11434:11434` opens port 11434 on the container for Ollama.
-2. `-v ollama:/root/.ollama` will store all your models in `C:/Users/USERNAME/.ollama` by default. Allows the container and the host machine to share models.
-3. If you want to access docker hosted applications in another docker container, you need to use `host.docker.internal:PORT`.
+2. If you want to access docker hosted applications in another docker container, you need to use `host.docker.internal:PORT`.
