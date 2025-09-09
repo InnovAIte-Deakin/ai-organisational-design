@@ -18,11 +18,11 @@ class SummaryResponse(BaseModel):
 
 async def prepare_summary_response(result: CallToolResult, debug: bool = True) -> Optional[SummaryResponse]:
 	try:
-		# if debug:
-		# 	print(result.content[0].text)
-		js = json.loads(result.content[0].text)[0]
-		# if debug:
-		# 	print(js)
+		content = result.content[0].text
+		if "does not exist" in content:
+			print("The record does not exist!")
+			return None
+		js = json.loads(content)[0]
 		value = SummaryResponse.model_validate(js)
 		if debug:
 			print(value.model_dump_json(indent=4))
@@ -48,7 +48,7 @@ async def main(server_url: str):
 				print(f"- {tool.name} - {tool.description or "No Description"}")
 			#
 			# TEST CALLING THE TOOL MANUALLY
-			args = {"record_id": 4}
+			args = {"record_id": 5}
 			result: CallToolResult = await session.call_tool("Patient_Record_Summary", args)
 			summary: Optional[SummaryResponse] = await prepare_summary_response(result, debug=True)
 			print("Summary was returned!" if summary is not None else "Summary could not be made!")
