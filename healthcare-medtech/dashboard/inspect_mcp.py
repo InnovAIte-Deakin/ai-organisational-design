@@ -1,9 +1,36 @@
 
+from typing import Optional
+from mcp import ClientSession
+from mcp.types import CallToolResult
+from mcp.client.streamable_http import streamablehttp_client
+from pydantic import BaseModel
+
 import asyncio
 import json
 
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+class SummaryResponse(BaseModel):
+	id: int
+	individual_id: int
+	hash: str
+	summary: str
+	version: int
+	created_date: str
+
+async def prepare_summary_response(result: CallToolResult, debug: bool = True) -> Optional[SummaryResponse]:
+	try:
+		# if debug:
+		# 	print(result.content[0].text)
+		js = json.loads(result.content[0].text)[0]
+		# if debug:
+		# 	print(js)
+		value = SummaryResponse.model_validate(js)
+		if debug:
+			print(value.model_dump_json(indent=4))
+		return value
+	except Exception as e:
+		if debug:
+			print(e)
+		return None
 
 async def main(server_url: str):
 	# Connect to the specified MCP server using Streamable HTTP transport
@@ -18,8 +45,14 @@ async def main(server_url: str):
 			print("\n\n")
 			print("Available tools:")
 			for tool in tools:
-				print(f"- {tool.name} - {tool.description} - {json.dumps(tool.inputSchema, indent=None)}")
+				print(f"- {tool.name} - {tool.description or "No Description"}")
+			#
+			# TEST CALLING THE TOOL MANUALLY
+			args = {"record_id": 4}
+			result: CallToolResult = await session.call_tool("Patient_Record_Summary", args)
+			summary: Optional[SummaryResponse] = await prepare_summary_response(result, debug=True)
+			print("Summary was returned!" if summary is not None else "Summary could not be made!")
 
 if __name__ == "__main__":
-	MCP_SERVER_URL = "https://AAAAAAA.app.n8n.cloud/mcp/AAAAAAA"
+	MCP_SERVER_URL = "https://griycor.app.n8n.cloud/mcp-test/9cb4d576-7df4-4f23-82eb-59ce51f7cbd5"
 	asyncio.run(main(MCP_SERVER_URL))
