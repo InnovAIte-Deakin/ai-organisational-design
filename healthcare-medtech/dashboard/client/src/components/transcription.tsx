@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Square, Bot, Save, Download } from "lucide-react";
+import { ToastAction } from "@/components/ui/toast"; 
+import { Mic, Square, Bot } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface TreatmentNotes {
@@ -13,97 +14,45 @@ interface TreatmentNotes {
   treatment_plan: string;
 }
 
-type SpeechRecognitionType = typeof window & {
-  webkitSpeechRecognition?: any;
-  SpeechRecognition?: any;
-};
+function dedupeAppend(prev: string, next: string, overlapWords = 8) {
+  const p = prev.trim();
+  const n = next.trim();
+  if (!p) return n;
+  const pWords = p.split(/\s+/);
+  const tail = pWords.slice(-overlapWords).join(" ");
+  const idx = n.toLowerCase().indexOf(tail.toLowerCase());
+  if (idx === 0) return (p + " " + n.slice(tail.length)).trim();
+  if (p.toLowerCase().includes(n.toLowerCase())) return p;
+  return (p + " " + n).trim();
+}
+
+function pickBestMime(): { mimeType?: string; ext: "ogg" | "webm" } {
+  const supports = (t: string) =>
+    typeof MediaRecorder !== "undefined" &&
+    typeof MediaRecorder.isTypeSupported === "function" &&
+    MediaRecorder.isTypeSupported(t);
+
+  if (supports("audio/ogg;codecs=opus")) return { mimeType: "audio/ogg;codecs=opus", ext: "ogg" };
+  if (supports("audio/webm;codecs=opus")) return { mimeType: "audio/webm;codecs=opus", ext: "webm" };
+  if (supports("audio/webm")) return { mimeType: "audio/webm", ext: "webm" };
+  return { ext: "webm" };
+}
+
+// 🔧 Ensure both calls go to Flask (5002)
+const API_BASE = import.meta?.env?.VITE_API_BASE ?? "http://127.0.0.1:5002";
 
 export default function Transcription() {
   const [isRecording, setIsRecording] = useState(false);
   const [finalText, setFinalText] = useState("");
-  const [interimText, setInterimText] = useState("");
   const [treatmentNotes, setTreatmentNotes] = useState<TreatmentNotes | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const recognitionRef = useRef<any | null>(null);
-  const isManuallyStoppingRef = useRef(false);
-  const lastFinalRef = useRef<string>("");
-
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const segTimerRef = useRef<number | null>(null);
+  const chosenExtRef = useRef<"ogg" | "webm">("webm");
+  const { mimeType } = pickBestMime(); 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const ensureRecognition = () => {
-    if (recognitionRef.current) return recognitionRef.current;
-
-    const w = window as unknown as SpeechRecognitionType;
-    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
-    if (!SR) {
-      toast({
-        title: "Speech not supported",
-        description:
-          "Your browser doesn't support the Web Speech API. Use Chrome desktop or switch to a server transcription endpoint.",
-        variant: "destructive",
-      });
-      return null;
-    }
-
-    const rec = new SR();
-    rec.lang = "en-AU";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-
-    rec.onresult = (event: any) => {
-
-      let latestInterim = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const res = event.results[i];
-        const text = res[0]?.transcript?.trim() ?? "";
-
-        if (res.isFinal) {
-
-          if (text && text !== lastFinalRef.current) {
-            setFinalText((prev) => (prev ? `${prev} ${text}` : text));
-            lastFinalRef.current = text;
-          }
-
-          latestInterim = "";
-        } else {
-
-          latestInterim = text;
-        }
-      }
-      setInterimText(latestInterim);
-    };
-
-    rec.onerror = (e: any) => {
-      if (e?.error !== "no-speech") {
-        toast({
-          title: "Recording error",
-          description: `Speech recognition error: ${e?.error || "unknown"}`,
-          variant: "destructive",
-        });
-      }
-    };
-
-    rec.onend = () => {
-      if (!isManuallyStoppingRef.current && isRecording) {
-        try { rec.start(); } catch {}
-      }
-    };
-
-    recognitionRef.current = rec;
-    return rec;
-  };
-
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        isManuallyStoppingRef.current = true;
-        try { recognitionRef.current.stop(); } catch {}
-      }
-    };
-  }, []);
 
   const processTranscriptionMutation = useMutation({
     mutationFn: async (transcription: string) => {
@@ -113,19 +62,19 @@ export default function Transcription() {
         type: "transcription",
         status: "completed",
       });
-
       const result = await apiRequest(
-        "POST",
         `/api/appointments/${appointment.id}/transcription`,
+        "POST",
         { transcription }
       );
-
       return result;
     },
     onSuccess: (data: any) => {
       if (data.treatmentNotes) {
         setTreatmentNotes(data.treatmentNotes);
         toast({ title: "Success", description: "Transcription processed and treatment notes generated" });
+      } else {
+        toast({ title: "Success", description: "Transcription processed" });
       }
     },
     onError: () => {
@@ -133,165 +82,204 @@ export default function Transcription() {
     },
   });
 
-  const startRecording = async () => {
-    const rec = ensureRecognition();
-    if (!rec) return;
+  
+  const SLICE_MS = 5000; 
 
-    try { await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch {
-      toast({ title: "Microphone blocked", description: "Please allow microphone access.", variant: "destructive" });
+  const sendChunk = async (blob: Blob) => {
+    if (!blob || !blob.size) return;
+    const ext = chosenExtRef.current;
+    const form = new FormData();
+    form.append("file", blob, `chunk-${Date.now()}.${ext}`);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/live-transcribe`, { method: "POST", body: form });
+      const json = await res.json();
+      if (json?.transcript && typeof json.transcript === "string" && json.transcript.trim()) {
+        setFinalText(prev => dedupeAppend(prev, json.transcript));
+      }
+    } catch (err) {
+      console.error("Live transcription error:", err);
+    }
+  };
+
+  const startNewSegment = () => {
+    const stream = streamRef.current!;
+    // Decide extension on first successful recorder creation
+    if (mimeType?.includes("ogg")) chosenExtRef.current = "ogg";
+    else chosenExtRef.current = "webm";
+
+    const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    recorderRef.current = rec;
+
+    rec.ondataavailable = (e: BlobEvent) => {
+      void sendChunk(e.data);
+    };
+
+    rec.onstart = () => {
+      segTimerRef.current = window.setTimeout(() => {
+        try { rec.requestData(); } catch {}
+        try { rec.stop(); } catch {}
+        startNewSegment(); 
+      }, SLICE_MS) as unknown as number;
+    };
+
+    rec.onerror = (ev) => {
+      console.error("Recorder error", ev);
+      toast({ title: "Recording error", description: "An error occurred.", variant: "destructive" });
+    };
+
+    rec.start(); 
+  };
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast({ title: "Microphone not supported", description: "Use Chrome/Edge.", variant: "destructive" });
       return;
     }
 
-    isManuallyStoppingRef.current = false;
     try {
-      rec.start();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      setFinalText("");
       setIsRecording(true);
-      toast({ title: "Recording Started", description: "Live transcription is running…" });
-    } catch {}
+      toast({ title: "Recording Started", description: "Live transcription enabled." });
+
+      startNewSegment();
+    } catch (err) {
+      console.error("getUserMedia error", err);
+      toast({ title: "Microphone blocked", description: "Allow access.", variant: "destructive" });
+    }
   };
 
   const stopRecording = () => {
-    if (recognitionRef.current) {
-      isManuallyStoppingRef.current = true;
-      try { recognitionRef.current.stop(); } catch {}
+    if (segTimerRef.current) { clearTimeout(segTimerRef.current); segTimerRef.current = null; }
+    const rec = recorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      try { rec.requestData(); } catch {}
+      try { rec.stop(); } catch {}
     }
+    recorderRef.current = null;
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+
     setIsRecording(false);
-    toast({ title: "Recording Stopped", description: "You can now process the transcription" });
+    toast({ title: "Recording Stopped", description: "Live transcription complete." });
   };
 
   const toggleRecording = () => (isRecording ? stopRecording() : startRecording());
 
   const handleProcessTranscription = () => {
-    const transcript = [finalText, interimText].filter(Boolean).join(" ").trim();
+    const transcript = finalText.trim();
     if (!transcript) {
-      toast({ title: "Error", description: "Please record some audio first", variant: "destructive" });
+      toast({ title: "Error", description: "Record audio first.", variant: "destructive" });
       return;
     }
     processTranscriptionMutation.mutate(transcript);
   };
 
-  const handleSave = () => {
-    if (treatmentNotes) {
-      toast({ title: "Success", description: "Treatment notes saved to patient record" });
-    } else {
-      toast({ title: "Error", description: "No treatment notes to save", variant: "destructive" });
+  const handleFinalizeAndSave = async () => {
+    const transcript = finalText.trim();
+    if (!transcript) {
+      toast({ title: "Error", description: "Record audio first.", variant: "destructive" });
+      return;
+    }
+    const body = { transcription: transcript, treatmentNotes: treatmentNotes ?? undefined };
+
+    try {
+      setIsSaving(true);
+      const res = await fetch(`${API_BASE}/api/save-to-onedrive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.ok) throw new Error(json?.note || "Upload failed");
+
+      if (json.provider === "onedrive") {
+        toast({
+          title: "Saved to OneDrive",
+          description: `Folder: ${json.folder}\nFile: ${json.name}`,
+          action: json.webUrl ? (
+            <ToastAction
+              altText="Open in OneDrive"
+              onClick={() => window.open(json.webUrl, "_blank", "noopener,noreferrer")}
+            >
+              Open
+            </ToastAction>
+          ) : undefined,
+        });
+      } else {
+        toast({
+          title: "Saved locally",
+          description: `File: ${json.filename} • ${json.where}${json.note ? `\nNote: ${json.note}` : ""}`,
+        });
+      }
+    } catch (e: any) {
+      toast({ title: "Save failed", description: e?.message || "Check server / Graph credentials.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleExport = () => {
-    if (!treatmentNotes) return;
-    const exportData = {
-      transcription: [finalText, interimText].filter(Boolean).join(" ").trim(),
-      treatmentNotes,
-      generatedAt: new Date().toISOString(),
+  useEffect(() => {
+    return () => {
+      try { if (segTimerRef.current) clearTimeout(segTimerRef.current); } catch {}
+      try {
+        const rec = recorderRef.current;
+        if (rec && rec.state !== "inactive") { rec.requestData(); rec.stop(); }
+      } catch {}
+      try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch {}
     };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `treatment-notes-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({ title: "Success", description: "Treatment notes exported successfully" });
-  };
+  }, []);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Voice Recording Interface */}
-      <Card data-testid="card-transcription">
+      {/* Voice Recording */}
+      <Card>
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Dental Appointment Notes</h3>
-
-          {/* Recording Controls */}
+          <h3 className="text-lg font-semibold mb-4">Dental Appointment Notes</h3>
           <div className="text-center mb-6">
             <Button
               onClick={toggleRecording}
-              className={`w-16 h-16 rounded-full text-2xl transition-colors mb-4 ${
-                isRecording ? "bg-red-700 hover:bg-red-800" : "bg-red-600 hover:bg-red-700"
-              }`}
-              data-testid="button-toggle-recording"
+              className={`w-16 h-16 rounded-full text-2xl mb-4 ${isRecording ? "bg-red-700" : "bg-red-600"}`}
             >
               {isRecording ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
             </Button>
-            <p className="text-sm text-gray-600">
-              {isRecording ? "Recording in progress" : "Click to start recording"}
-            </p>
-            {isRecording && (
-              <div className="flex items-center justify-center space-x-2 mt-2">
-                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                <span className="text-sm text-red-600 font-medium">Recording...</span>
-              </div>
-            )}
-          </div>
-
-          {/* Live Transcription */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2">Live Transcription</h4>
-            <div className="min-h-24 text-sm text-gray-700 bg-gray-50 p-3 rounded" data-testid="text-transcription-output">
-              {(finalText || interimText) ? `${finalText} ${interimText}`.trim() : (
-                <span className="text-gray-400">Transcription will appear here...</span>
-              )}
+            <p className="text-sm text-gray-600">{isRecording ? "Recording…" : "Click to start recording"}</p>
+            <div className="border p-3 rounded bg-gray-50 min-h-24 mt-4 text-sm text-gray-700">
+              {finalText || <span className="text-gray-400">Live transcription will appear here...</span>}
             </div>
           </div>
-
-          <Button
-            onClick={handleProcessTranscription}
-            disabled={processTranscriptionMutation.isPending || (!finalText && !interimText)}
-            className="w-full mt-4 bg-medical-blue-600 hover:bg-medical-blue-700"
-            data-testid="button-process-transcription"
-          >
-            <Bot className="h-4 w-4 mr-2" />
-            {processTranscriptionMutation.isPending ? "Processing..." : "Process with AI"}
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={handleProcessTranscription} disabled={!finalText}>
+              <Bot className="h-4 w-4 mr-2" /> Process with AI
+            </Button>
+            <Button onClick={handleFinalizeAndSave} disabled={!finalText || isSaving}>
+              {isSaving ? "Saving…" : "Save to OneDrive"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* SOAP Notes Generation */}
-      <Card data-testid="card-soap-notes">
+      {/* AI-generated Treatment Notes */}
+      <Card>
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">AI-Generated Treatment Notes</h3>
-
-          <div className="space-y-4">
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-medical-blue-900 mb-2">Chief Complaint</h4>
-              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded min-h-16" data-testid="text-chief-complaint">
-                {treatmentNotes?.chief_complaint || <span className="text-gray-400">AI will extract patient's main concern...</span>}
+          <h3 className="text-lg font-semibold mb-4">AI-Generated Treatment Notes</h3>
+          {["chief_complaint", "examination", "diagnosis", "treatment_plan"].map(field => (
+            <div key={field} className="border p-4 rounded mb-4">
+              <h4 className="text-sm font-semibold text-medical-blue-900 mb-2">
+                {field.replace("_", " ").toUpperCase()}
+              </h4>
+              <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                {treatmentNotes?.[field as keyof TreatmentNotes] || <span className="text-gray-400">AI will generate...</span>}
               </div>
             </div>
-
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-medical-blue-900 mb-2">Clinical Examination</h4>
-              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded min-h-16" data-testid="text-examination">
-                {treatmentNotes?.examination || <span className="text-gray-400">AI will extract examination findings...</span>}
-              </div>
-            </div>
-
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-medical-blue-900 mb-2">Diagnosis</h4>
-              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded min-h-16" data-testid="text-diagnosis">
-                {treatmentNotes?.diagnosis || <span className="text-gray-400">AI will generate dental diagnosis...</span>}
-              </div>
-            </div>
-
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-medical-blue-900 mb-2">Treatment Plan</h4>
-              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded min-h-16" data-testid="text-treatment-plan">
-                {treatmentNotes?.treatment_plan || <span className="text-gray-400">AI will generate detailed treatment plan...</span>}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex space-x-3 mt-6">
-            <Button onClick={handleSave} disabled={!treatmentNotes} className="flex-1 bg-green-600 hover:bg-green-700" data-testid="button-save-treatment">
-              <Save className="h-4 w-4 mr-2" /> Save Notes
-            </Button>
-            <Button onClick={handleExport} disabled={!treatmentNotes} className="flex-1 bg-gray-600 hover:bg-gray-700" data-testid="button-export-treatment">
-              <Download className="h-4 w-4 mr-2" /> Export
-            </Button>
-          </div>
+          ))}
         </CardContent>
       </Card>
     </div>
