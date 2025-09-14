@@ -1,6 +1,13 @@
 
 import { createClient } from '@supabase/supabase-js';
+import assert from 'assert';
 import { escape } from 'querystring';
+
+const url = process.env.SUPABASE_URL as string;
+const key = process.env.SUPABASE_KEY as string;
+
+assert(url !== undefined, "Supabase URL must be set!");
+assert(key !== undefined, "Supabase KEY must be set!");
 
 type IndividualRecord = {
     id: number
@@ -127,9 +134,6 @@ class MedTechSupabase {
         return undefined;
     }
 }
-
-const url = '';
-const key = '';
 
 const test_db = new MedTechSupabase(url, key);
 const individual = await test_db.search_individual("4");

@@ -1,8 +1,14 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import * as dotenv from 'dotenv'
+import assert from "assert";
+dotenv.config()
 
-const baseUrl = new URL("http://localhost:5678/mcp-test/9cb4d576-7df4-4f23-82eb-59ce51f7cbd5");
+const client_url = process.env.MCP_SERVER_URL as string;
+assert(client_url !== undefined, "Environment MCP_SERVER_URL must be set!");
+
+const baseUrl = new URL(client_url);
 
 let client: Client|undefined = undefined
 
@@ -31,7 +37,7 @@ tools.tools.map(tool => {
 const tool_response = await client.callTool({
     name: "Patient_Record_Summary",
     arguments: {
-        "record_id": 4
+        "record_id": 6
     }
 })
 

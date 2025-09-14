@@ -7,7 +7,7 @@ import {
   type InsertAppointment,
   type DentalHistory,
   type InsertDentalHistory
-} from "@shared/schema";
+} from "../shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -15,7 +15,7 @@ export interface IStorage {
   getPatients(): Promise<Patient[]>;
   getPatient(id: string): Promise<Patient | undefined>;
   createPatient(patient: InsertPatient): Promise<Patient>;
-  updatePatientAISummary(id: string, aiSummary: string): Promise<Patient>;
+  updatePatientAISummary(id: string, aiSummary: string, version?: number): Promise<Patient>;
   
   // Dental X-rays
   getDentalXrays(): Promise<DentalXray[]>;
@@ -138,7 +138,7 @@ export class MemStorage implements IStorage {
     return patient;
   }
 
-  async updatePatientAISummary(id: string, aiSummary: string): Promise<Patient> {
+  async updatePatientAISummary(id: string, aiSummary: string, version: number = 1): Promise<Patient> {
     const patient = this.patients.get(id);
     if (!patient) {
       throw new Error("Patient not found");
