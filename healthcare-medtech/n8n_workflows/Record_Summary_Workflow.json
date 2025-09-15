@@ -1,5 +1,5 @@
 {
-  "name": "MedTech MCP",
+  "name": "Record_Summary_Workflow",
   "nodes": [
     {
       "parameters": {
@@ -9,10 +9,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        64,
-        0
+        -144,
+        -208
       ],
-      "id": "40da002b-0006-4477-99fe-f56046c92361",
+      "id": "d7278052-82af-4b19-8d0e-f8899895f1c1",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -31,15 +31,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        0
+        16,
+        -208
       ],
-      "id": "78f67f59-60c4-41d2-85c6-f83b88e4e62f",
+      "id": "de9feceb-a39a-4cc3-ab4b-6a1a62839674",
       "name": "Patient Record",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "grw4lm80dLamWktA",
+          "id": "c9Xf435KYATiW6Y3",
           "name": "Supabase account"
         }
       }
@@ -62,15 +62,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        704,
-        -16
+        496,
+        -224
       ],
-      "id": "2a74dd29-ff2b-47af-b0d6-35d314d2b2bd",
+      "id": "2201eace-6668-475a-8726-422da87c9d77",
       "name": "Dentist Notes",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "grw4lm80dLamWktA",
+          "id": "c9Xf435KYATiW6Y3",
           "name": "Supabase account"
         }
       }
@@ -93,15 +93,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        560,
-        -16
+        352,
+        -224
       ],
-      "id": "cb0cd9f1-fb95-4e6c-b5e5-d9c5d624254a",
+      "id": "4a1e02e8-c296-4806-8ffa-40433b605d25",
       "name": "Appointment History",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "grw4lm80dLamWktA",
+          "id": "c9Xf435KYATiW6Y3",
           "name": "Supabase account"
         }
       }
@@ -117,15 +117,15 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "typeVersion": 1,
       "position": [
-        1744,
-        192
+        1536,
+        -16
       ],
-      "id": "058d7f47-e8b7-4811-8035-9b87b599fdd2",
+      "id": "38565de9-3f1d-4123-9deb-d67d8a7e888d",
       "name": "Ollama Chat Model",
       "credentials": {
         "ollamaApi": {
-          "id": "P7FvD3S1Np8fS6QE",
-          "name": "NGROK OLLAMA HOST"
+          "id": "Hpr0lcAPg9nDMfpz",
+          "name": "Ollama account"
         }
       }
     },
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        864,
-        -16
+        656,
+        -224
       ],
-      "id": "1cc1ef56-2aa3-43d7-9b39-6fc20a502dff",
+      "id": "a01910c4-eb8c-43b4-81a9-0fe61eea072a",
       "name": "Combine to Structured"
     },
     {
@@ -149,10 +149,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1008,
-        -16
+        800,
+        -224
       ],
-      "id": "748cbae4-53d8-4dd4-91fb-6526e1a60133",
+      "id": "84ad9a1f-1fe2-4181-b7a6-cd57a3301537",
       "name": "Stringify"
     },
     {
@@ -163,10 +163,10 @@
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 1,
       "position": [
-        1136,
-        -16
+        928,
+        -224
       ],
-      "id": "0cd2817f-eeaf-45f0-91fc-ff8291770c64",
+      "id": "2a4f6301-e684-46f0-b677-967cf9046c72",
       "name": "Hashing"
     },
     {
@@ -197,10 +197,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        384,
-        0
+        176,
+        -208
       ],
-      "id": "8e17318c-d148-4621-a230-c8e026630562",
+      "id": "3ab31c29-82b0-4fb8-9603-693eeeae0067",
       "name": "Check if Record Exists"
     },
     {
@@ -219,15 +219,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1424,
-        -16
+        1216,
+        -224
       ],
-      "id": "c805edc7-5dd3-4dae-9bf8-59251a47fd66",
+      "id": "c846ab73-d6d3-4a2a-8f1c-41fcbc77274c",
       "name": "Summaries",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "grw4lm80dLamWktA",
+          "id": "c9Xf435KYATiW6Y3",
           "name": "Supabase account"
         }
       }
@@ -260,10 +260,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1568,
-        -16
+        1360,
+        -224
       ],
-      "id": "9b0b2b3c-41bb-4755-8b46-c851868f1775",
+      "id": "75668cfb-8e37-4784-bd14-44df13d61828",
       "name": "Check if Summary Already Made"
     },
     {
@@ -277,7 +277,7 @@
             },
             {
               "fieldId": "individual_id",
-              "fieldValue": "={{ $('Combine to Structured').item.json['Dentist Notes'][0].json.individual_id }}"
+              "fieldValue": "={{ $('Patient Record').item.json.id }}"
             },
             {
               "fieldId": "summary",
@@ -293,14 +293,14 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        2032,
-        48
+        1824,
+        -160
       ],
-      "id": "355e4914-bcfd-433a-b07e-b57c7314b550",
+      "id": "876a43f2-b9d5-4b94-bcc4-b19c13b4020f",
       "name": "Store Summary Output",
       "credentials": {
         "supabaseApi": {
-          "id": "grw4lm80dLamWktA",
+          "id": "c9Xf435KYATiW6Y3",
           "name": "Supabase account"
         }
       }
@@ -322,10 +322,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1280,
-        -16
+        1072,
+        -224
       ],
-      "id": "b046a1ac-ed35-4a65-907a-9b7add5244df",
+      "id": "faf88d10-235e-4e68-bbd5-ef563a45ac3b",
       "name": "Summary Versioning",
       "alwaysOutputData": true
     },
@@ -339,10 +339,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1744,
-        48
+        1536,
+        -160
       ],
-      "id": "3b028faa-6d58-48e5-951c-7caa2ef49301",
+      "id": "b2b3f426-1dfd-4d74-a075-faf44064db70",
       "name": "Basic LLM Chain"
     },
     {
@@ -353,10 +353,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1888,
-        192
+        1680,
+        -16
       ],
-      "id": "993f9a19-3e98-4c63-b36b-1cfc71a36d12",
+      "id": "5d97ebf9-e775-420e-89d9-49151b750026",
       "name": "Structured Output Parser"
     },
     {
@@ -366,10 +366,10 @@
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        560,
-        176
+        352,
+        -32
       ],
-      "id": "6ae0a4bc-8c8c-43f7-b692-cf82cc6a75d9",
+      "id": "418fcacf-03ae-4778-86b3-28ba349b0d8b",
       "name": "Stop and Error"
     }
   ],
@@ -377,7 +377,7 @@
     "When Executed by Another Workflow": [
       {
         "json": {
-          "record_id": 1
+          "record_id": 4
         }
       }
     ]
@@ -402,8 +402,7 @@
             "type": "main",
             "index": 0
           }
-        ],
-        []
+        ]
       ]
     },
     "Dentist Notes": {
@@ -524,11 +523,6 @@
         ]
       ]
     },
-    "Store Summary Output": {
-      "main": [
-        []
-      ]
-    },
     "Basic LLM Chain": {
       "main": [
         [
@@ -554,14 +548,13 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "callerPolicy": "any"
+    "executionOrder": "v1"
   },
-  "versionId": "4e00040d-3fba-4bf9-80eb-d0b9e77cf6eb",
+  "versionId": "f33e0b86-8d6d-436b-a93a-eb36ded62e97",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "d4b45c4bfc930a30cf723717401a9f283a24972514643d562a20d54a9eb11ac8"
+    "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"
   },
-  "id": "ZJyJH6zf2wrmTFbv",
+  "id": "WLrsdSMIs1lIgYgb",
   "tags": []
 }
