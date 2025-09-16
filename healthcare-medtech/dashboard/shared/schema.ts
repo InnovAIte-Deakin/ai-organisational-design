@@ -1,8 +1,59 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, json, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, json, integer, boolean, bigint, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Supabase schema tables
+export const individuals = pgTable("Individuals", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  created_date: timestamp("created_date", { withTimezone: true }).defaultNow().notNull(),
+  first_name: varchar("first_name").notNull(),
+  last_name: varchar("last_name").notNull(),
+  date_of_birth: date("date_of_birth").notNull(),
+  identification_num: varchar("identification_num").notNull(),
+  email_primary: varchar("email_primary").notNull(),
+  address_primary: varchar("address_primary").notNull(),
+  address_secondary: varchar("address_secondary"),
+  phone_number: varchar("phone_number").notNull(),
+  is_employee: boolean("is_employee").default(false).notNull(),
+});
+
+export const staff = pgTable("Staff", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  individual_id: bigint("individual_id", { mode: "number" }).references(() => individuals.id).notNull(),
+  background_id: varchar("background_id").notNull(),
+});
+
+export const appointmentHistory = pgTable("Appointment History", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  individual_id: bigint("individual_id", { mode: "number" }).references(() => individuals.id).notNull(),
+  creation_date: timestamp("creation_date", { withTimezone: true }).defaultNow().notNull(),
+  appointed_date: timestamp("appointed_date", { withTimezone: false }).notNull(),
+  was_attended: boolean("was_attended").default(false).notNull(),
+  attendant_id: bigint("attendant_id", { mode: "number" }).notNull(),
+  assistant_1_id: bigint("assistant_1_id", { mode: "number" }),
+  assistant_2_id: bigint("assistant_2_id", { mode: "number" }),
+});
+
+export const dentistNotes = pgTable("Dentist Notes", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  individual_id: bigint("individual_id", { mode: "number" }).references(() => individuals.id).notNull(),
+  created_date: timestamp("created_date", { withTimezone: true }).defaultNow().notNull(),
+  title: varchar("title").notNull(),
+  text: text("text").notNull(),
+  appointment_id: bigint("appointment_id", { mode: "number" }),
+});
+
+export const summaries = pgTable("Summaries", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  individual_id: bigint("individual_id", { mode: "number" }).references(() => individuals.id).notNull(),
+  hash: varchar("hash").notNull(),
+  summary: text("summary").notNull(),
+  version: bigint("version", { mode: "number" }).notNull(),
+  created_date: timestamp("created_date", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Legacy schema for compatibility (keeping existing structure for other parts of the app)
 export const patients = pgTable("patients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -62,6 +113,32 @@ export const dentalHistory = pgTable("dental_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Supabase schema types
+export const insertIndividualSchema = createInsertSchema(individuals).omit({
+  id: true,
+  created_date: true,
+});
+
+export const insertStaffSchema = createInsertSchema(staff).omit({
+  id: true,
+});
+
+export const insertAppointmentHistorySchema = createInsertSchema(appointmentHistory).omit({
+  id: true,
+  creation_date: true,
+});
+
+export const insertDentistNotesSchema = createInsertSchema(dentistNotes).omit({
+  id: true,
+  created_date: true,
+});
+
+export const insertSummariesSchema = createInsertSchema(summaries).omit({
+  id: true,
+  created_date: true,
+});
+
+// Legacy schema types for compatibility
 export const insertPatientSchema = createInsertSchema(patients).omit({
   id: true,
   createdAt: true,
@@ -82,6 +159,19 @@ export const insertDentalHistorySchema = createInsertSchema(dentalHistory).omit(
   createdAt: true,
 });
 
+// Supabase types
+export type Individual = typeof individuals.$inferSelect;
+export type InsertIndividual = z.infer<typeof insertIndividualSchema>;
+export type Staff = typeof staff.$inferSelect;
+export type InsertStaff = z.infer<typeof insertStaffSchema>;
+export type AppointmentHistory = typeof appointmentHistory.$inferSelect;
+export type InsertAppointmentHistory = z.infer<typeof insertAppointmentHistorySchema>;
+export type DentistNotes = typeof dentistNotes.$inferSelect;
+export type InsertDentistNotes = z.infer<typeof insertDentistNotesSchema>;
+export type Summaries = typeof summaries.$inferSelect;
+export type InsertSummaries = z.infer<typeof insertSummariesSchema>;
+
+// Legacy types for compatibility
 export type Patient = typeof patients.$inferSelect;
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
 export type DentalXray = typeof dentalXrays.$inferSelect;
@@ -90,3 +180,6 @@ export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 export type DentalHistory = typeof dentalHistory.$inferSelect;
 export type InsertDentalHistory = z.infer<typeof insertDentalHistorySchema>;
+
+// Alias for medical history to match client expectations
+export type MedicalHistory = DentalHistory;

@@ -1,0 +1,289 @@
+
+staff:
+  - id: 1
+    first_name: Emily
+    last_name: Carter
+    background_id: Dn45A9-Xy92K3-Po84B1
+  - id: 2
+    first_name: Daniel
+    last_name: Singh
+    background_id: Ab21L4-Tu56F7-Qr98H2
+  - id: 3
+    first_name: Sophia
+    last_name: Kim
+    background_id: Lm34P7-Ui77R5-As11V9
+  - id: 4
+    first_name: James
+    last_name: O'Connor
+    background_id: Zx83D2-Nm65Q8-Lk23F1
+  - id: 5
+    first_name: Olivia
+    last_name: Brown
+    background_id: Rt55Y9-Fg42H1-Kj67T4
+  - id: 6
+    first_name: Michael
+    last_name: Rossi
+    background_id: Kj83P4-As56L1-Qz88W7
+  - id: 7
+    first_name: Aisha
+    last_name: Patel
+    background_id: Vt93N1-Ku52E6-Yh41D9
+
+patients:
+  - record_id: 101
+    first_name: Lucas
+    last_name: Miller
+    date_of_birth: 12-04-1992
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 102
+    first_name: Hannah
+    last_name: Nguyen
+    date_of_birth: 25-11-1985
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 103
+    first_name: Ethan
+    last_name: Rodriguez
+    date_of_birth: 08-07-2001
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 104
+    first_name: Isabella
+    last_name: Johnson
+    date_of_birth: 30-01-1996
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 105
+    first_name: Noah
+    last_name: Williams
+    date_of_birth: 14-09-1989
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 106
+    first_name: Mia
+    last_name: Garcia
+    date_of_birth: 22-02-2004
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 107
+    first_name: Benjamin
+    last_name: Thompson
+    date_of_birth: 19-07-1978
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 108
+    first_name: Ava
+    last_name: Martinez
+    date_of_birth: 06-03-1993
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 109
+    first_name: Liam
+    last_name: Evans
+    date_of_birth: 10-12-2000
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+  - record_id: 110
+    first_name: Chloe
+    last_name: Wilson
+    date_of_birth: 03-08-1982
+    identification_num: 0000-0000-0000-0000-0000
+    address: PRIMARY_ADDRESS
+    address_secondary: SECOND_ADDRESS
+    phone: 00-000-000-000
+
+appointments:
+  - record_id: 101
+    attendant_1: 1
+    attendant_2: 2
+    assistant_1: 5
+    assistant_2: null
+
+  - record_id: 101
+    attendant_1: 2
+    attendant_2: null
+    assistant_1: 3
+    assistant_2: 5
+
+  - record_id: 102
+    attendant_1: 3
+    attendant_2: 1
+    assistant_1: 4
+    assistant_2: null
+
+  - record_id: 103
+    attendant_1: 4
+    attendant_2: null
+    assistant_1: null
+    assistant_2: 5
+
+  - record_id: 104
+    attendant_1: 6
+    attendant_2: null
+    assistant_1: 7
+    assistant_2: 5
+
+  - record_id: 105
+    attendant_1: 2
+    attendant_2: 6
+    assistant_1: null
+    assistant_2: 3
+
+  - record_id: 106
+    attendant_1: 1
+    attendant_2: null
+    assistant_1: 7
+    assistant_2: null
+
+  - record_id: 107
+    attendant_1: 3
+    attendant_2: 4
+    assistant_1: null
+    assistant_2: 5
+
+  - record_id: 108
+    attendant_1: 6
+    attendant_2: null
+    assistant_1: 7
+    assistant_2: null
+
+  - record_id: 109
+    attendant_1: 1
+    attendant_2: 2
+    assistant_1: null
+    assistant_2: null
+
+  - record_id: 110
+    attendant_1: 5
+    attendant_2: null
+    assistant_1: 3
+    assistant_2: null
+
+notes:
+  - record_id: 101
+    title: Cleaning
+    text: "Mild plaque buildup on molars. Scaling performed, gums healthy. Compared to last visit, gum inflammation has reduced."
+  - record_id: 101
+    title: Orthodontist
+    text: "Braces check-up. Adjusted upper wire for better alignment. Patient reports less discomfort compared to previous month."
+  - record_id: 101
+    title: Follow-up
+    text: "Teeth alignment improving. Patient instructed on better flossing techniques around brackets."
+
+  - record_id: 102
+    title: Root Canal
+    text: "Completed second stage of root canal treatment on lower left molar. Infection clearing up, prescribed antibiotics. Improvement from prior swelling."
+  - record_id: 102
+    title: Check-up
+    text: "Tooth healing well. Crown preparation planned for next appointment."
+  - record_id: 102
+    title: Crown Placement
+    text: "Permanent crown placed. Patient reports no pain, bite is stable."
+
+  - record_id: 103
+    title: Extraction
+    text: "Wisdom tooth extraction (upper right). Clean removal, no complications. Patient advised to follow soft food diet."
+  - record_id: 103
+    title: Follow-up
+    text: "Healing progressing well, no signs of infection. Patient cleared for normal diet."
+  - record_id: 103
+    title: Cleaning
+    text: "Routine cleaning after recovery. Some plaque around lower incisors removed."
+
+  - record_id: 104
+    title: Filling
+    text: "Cavity in premolar filled with composite resin. Patient had mild sensitivity previously, now resolved."
+  - record_id: 104
+    title: Check-up
+    text: "Filling intact, no further decay detected. Patient advised to reduce sugar intake."
+  - record_id: 104
+    title: Whitening
+    text: "Patient requested cosmetic whitening. Shade improved by 1.5 levels."
+
+  - record_id: 105
+    title: Crown Placement
+    text: "Temporary crown replaced with permanent porcelain crown. Bite alignment adjusted. Good healing of surrounding gum tissue."
+  - record_id: 105
+    title: Cleaning
+    text: "Routine cleaning performed. Crown area stable, gum health maintained."
+  - record_id: 105
+    title: Root Canal
+    text: "Second molar showing deep decay. Root canal started, temporary filling placed."
+
+  - record_id: 106
+    title: Braces Adjustment
+    text: "Tightened lower braces. Patient reports occasional soreness. Progressing as expected compared to previous adjustment."
+  - record_id: 106
+    title: Orthodontist
+    text: "Added elastic bands for crossbite correction. Patient instructed on daily wear."
+  - record_id: 106
+    title: Cleaning
+    text: "Light cleaning performed around braces. Some tartar buildup removed."
+
+  - record_id: 107
+    title: Denture Fitting
+    text: "Partial denture fitted. Patient adjusting well. Minor adjustments made for comfort."
+  - record_id: 107
+    title: Follow-up
+    text: "Patient reports improved comfort, no sore spots. Denture stability good."
+  - record_id: 107
+    title: Cleaning
+    text: "Routine cleaning. Denture area checked, gums healthy."
+
+  - record_id: 108
+    title: Whitening
+    text: "Professional whitening session completed. Shade improved by two levels. No gum irritation observed."
+  - record_id: 108
+    title: Cleaning
+    text: "Routine cleaning, minimal tartar. Patient maintaining good hygiene."
+  - record_id: 108
+    title: Check-up
+    text: "Examined enamel, slight wear on molars. Recommended fluoride treatment."
+
+  - record_id: 109
+    title: Cleaning
+    text: "Routine cleaning performed. No signs of gum disease. Patient maintaining excellent oral hygiene."
+  - record_id: 109
+    title: Orthodontist
+    text: "Consultation for braces. Discussed treatment options, patient considering."
+  - record_id: 109
+    title: Check-up
+    text: "Follow-up exam. Still no signs of decay. Encouraged to proceed with orthodontic treatment."
+
+  - record_id: 110
+    title: Check-up
+    text: "Routine examination. Noted slight enamel wear on molars. Advised night guard to prevent grinding."
+  - record_id: 110
+    title: Cleaning
+    text: "Deep cleaning performed due to tartar buildup on lower teeth. Patient tolerated procedure well."
+  - record_id: 110
+    title: Night Guard Fitting
+    text: "Custom night guard fitted. Patient instructed on use. Should reduce grinding symptoms."
