@@ -44,6 +44,15 @@ Summaries:
 - version
 - creation_date
 
+Transcriptions:
+- unique_id
+- individual_id
+- created_date
+- text
+- appointment_id (optional)
+- hash
+- version
+
 ----
 
 -- WARNING: This schema is for context only and is not meant to be run.
@@ -97,4 +106,14 @@ CREATE TABLE public.Summaries (
   version bigint NOT NULL,
   created_date timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT Summaries_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.Transcriptions (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  individual_id bigint NOT NULL,
+  created_date timestamp with time zone NOT NULL DEFAULT now(),
+  text text NOT NULL,
+  appointment_id bigint,
+  hash text NOT NULL,
+  version bigint NOT NULL,
+  CONSTRAINT Transcriptions_pkey PRIMARY KEY (id)
 );
