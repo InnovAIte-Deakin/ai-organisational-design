@@ -85,6 +85,7 @@ export default function Transcription() {
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const whisperPipelineRef = useRef<Pipeline | null>(null);
+  const isRecordingRef = useRef<boolean>(false);
   const { toast } = useToast();
 
   // Load Whisper model with multiple fallback strategies
@@ -260,12 +261,10 @@ export default function Transcription() {
       });
       streamRef.current = stream;
 
-      // Set up Web Audio API for real-time processing
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({
+      // Create a dedicated audio context for processing that won't be closed during recording
+      const processingAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 16000
       });
-      
-      const source = audioContextRef.current.createMediaStreamSource(stream);
       
       // Use MediaRecorder for capturing audio chunks
       const mediaRecorder = new MediaRecorder(stream, {
@@ -281,14 +280,16 @@ export default function Transcription() {
       };
 
       mediaRecorder.onstop = async () => {
-        if (audioChunks.length > 0) {
+        if (audioChunks.length > 0 && isRecordingRef.current) {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           
           try {
-            // Ensure audio context is still available
-            if (!audioContextRef.current) {
-              console.warn('Audio context not available for decoding');
-              return;
+            // Create a fresh audio context for each processing if needed
+            let contextToUse = processingAudioContext;
+            if (contextToUse.state === 'closed') {
+              contextToUse = new (window.AudioContext || (window as any).webkitAudioContext)({
+                sampleRate: 16000
+              });
             }
 
             // Convert blob to audio data for Whisper
@@ -300,7 +301,7 @@ export default function Transcription() {
               return;
             }
 
-            const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+            const audioBuffer = await contextToUse.decodeAudioData(arrayBuffer);
             let audioData = audioBuffer.getChannelData(0);
             
             // Check if we have actual audio data
@@ -323,9 +324,9 @@ export default function Transcription() {
         
         // Clear chunks and restart if still recording
         audioChunks = [];
-        if (isRecording && mediaRecorder.state === 'inactive') {
+        if (isRecordingRef.current && mediaRecorder.state === 'inactive') {
           setTimeout(() => {
-            if (isRecording && mediaRecorder.state === 'inactive') {
+            if (isRecordingRef.current && mediaRecorder.state === 'inactive') {
               try {
                 mediaRecorder.start();
               } catch (error) {
@@ -336,15 +337,22 @@ export default function Transcription() {
         }
       };
 
+      // Store the processing context for cleanup
+      audioContextRef.current = processingAudioContext;
+
       // Start recording and set up 2-second intervals for more responsive transcription
       mediaRecorder.start();
       
       const recordingInterval = setInterval(() => {
-        if (mediaRecorder.state === 'recording' && isRecording) {
+        if (mediaRecorder.state === 'recording' && isRecordingRef.current) {
           mediaRecorder.stop();
           setTimeout(() => {
-            if (isRecording && mediaRecorder.state === 'inactive') {
-              mediaRecorder.start();
+            if (isRecordingRef.current && mediaRecorder.state === 'inactive') {
+              try {
+                mediaRecorder.start();
+              } catch (error) {
+                console.warn('Failed to restart recording:', error);
+              }
             }
           }, 50); // Reduced delay for faster restart
         }
@@ -360,6 +368,7 @@ export default function Transcription() {
       setFinalText("");
       setLiveText("");
       setIsRecording(true);
+      isRecordingRef.current = true;
       toast({ title: "Recording Started", description: "Live Whisper transcription enabled." });
 
     } catch (err) {
@@ -370,22 +379,27 @@ export default function Transcription() {
 
   const stopRecording = () => {
     setIsRecording(false);
+    isRecordingRef.current = false;
     setLiveText(""); // Clear live text when stopping
     
+    // Clear any recording intervals first
+    const allIntervals = (window as any).recordingIntervals || [];
+    allIntervals.forEach((interval: number) => clearInterval(interval));
+    (window as any).recordingIntervals = [];
+    
+    // Stop the media stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
     
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    // Clear any recording intervals
-    const allIntervals = (window as any).recordingIntervals || [];
-    allIntervals.forEach((interval: number) => clearInterval(interval));
-    (window as any).recordingIntervals = [];
+    // Close audio context after a delay to allow any pending processing to complete
+    setTimeout(() => {
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    }, 1000);
 
     toast({ title: "Recording Stopped", description: "Live transcription complete." });
   };
