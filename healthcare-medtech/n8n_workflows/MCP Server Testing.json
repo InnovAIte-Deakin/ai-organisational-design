@@ -17,6 +17,7 @@
     },
     {
       "parameters": {
+        "description": "View the patient record and create a summary of their record.",
         "workflowId": {
           "__rl": true,
           "value": "WLrsdSMIs1lIgYgb",
@@ -49,16 +50,78 @@
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
       "position": [
-        256,
-        304
+        144,
+        288
       ],
       "id": "d4df0a3c-e723-4742-a6ed-7330cb1aff40",
       "name": "Patient Record Summary"
+    },
+    {
+      "parameters": {
+        "description": "Convert your transcription text into SOAP notes.",
+        "workflowId": {
+          "__rl": true,
+          "value": "u3qc23BlEzootpmT",
+          "mode": "list",
+          "cachedResultName": "Transcription Workflow"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "record_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('record_id', ``, 'number') }}",
+            "transcription": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('transcription', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "record_id",
+              "displayName": "record_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "transcription",
+              "displayName": "transcription",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        368,
+        288
+      ],
+      "id": "beb733af-ea46-4b47-af7e-7f8a197f9265",
+      "name": "Transcription to SOAP"
     }
   ],
   "pinData": {},
   "connections": {
     "Patient Record Summary": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcription to SOAP": {
       "ai_tool": [
         [
           {
@@ -74,7 +137,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "71b42cb3-b3d2-4934-b993-9f73b34de111",
+  "versionId": "b752787f-2357-439a-9f0f-ed520bb3c419",
   "meta": {
     "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"
   },

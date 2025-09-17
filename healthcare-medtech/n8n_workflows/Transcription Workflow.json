@@ -1,0 +1,381 @@
+{
+  "name": "Transcription Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "record_id",
+              "type": "number"
+            },
+            {
+              "name": "transcription"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        112,
+        0
+      ],
+      "id": "648acc90-030f-4677-bca8-d93dcc74daec",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "model": "gpt-oss:20b",
+        "options": {
+          "temperature": 0.6,
+          "numCtx": 8192
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        208
+      ],
+      "id": "3961d481-883b-415d-9588-5f4587fcc3aa",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Hpr0lcAPg9nDMfpz",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  \"individual_id\": $input.first().json.record_id,\n  \"transcription\": $input.first().json.transcription \n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "4dcb129e-5a92-491e-86ec-05d1d944fd2c",
+      "name": "Combine to Structured"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst stringifiedItems = JSON.stringify(items.map((item) => item.json));\nreturn { result: stringifiedItems };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        0
+      ],
+      "id": "79ae087d-25c4-42fc-8289-7e384b1a49db",
+      "name": "Stringify"
+    },
+    {
+      "parameters": {
+        "type": "SHA256",
+        "value": "={{ $json.result }}"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        560,
+        0
+      ],
+      "id": "6596f503-db2b-4995-ac90-c60115fbe11e",
+      "name": "Hashing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b01db05-8bdc-4e62-bfca-ec3364564292",
+              "name": "Summaries Version",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        704,
+        0
+      ],
+      "id": "175e9dab-cad5-4bf3-911c-240695f98508",
+      "name": "Summary Versioning",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a clinical summarization assistant. Using the following data:\n\n{{ $('Stringify').item.json.result }}\n\nGenerate a structured, clinic-focused summary of the patient's recent dental history.\n\n1. **General Patient Information**\n   - Summarize demographics (full name, date of birth, ID number, address, phone).\n\n2. **Appointments (Organized by Staff)**\n   - Group appointments by each staff member involved.\n   - For each, list: appointment date, role (attendant/assistant), attendance status, and collaborating staff.\n\n3. **Dentist Notes (Chronological)**\n   - Present notes in order of occurrence.\n   - For each entry, include: appointment type, clinical findings, treatments performed, and changes compared to prior visits.\n   - Be detailed\n\n4. **Overall Clinical Summary**\n   - Provide a concise narrative overview of the patient's dental course.\n   - Highlight recurring conditions, treatment progress, and outcomes.\n   - Identify areas needing follow-up or monitoring.\n   - Be detailed\n\nFormat the output for **professional use in a dental clinic**, emphasizing clarity, conciseness, and clinical relevance.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1168,
+        64
+      ],
+      "id": "91db6135-45b6-48b3-95c3-f1bda70ef589",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"summary\": {\n\t\t\t\"type\": \"string\"\n\t\t}\n\t}\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1312,
+        208
+      ],
+      "id": "8b2464bd-c108-4300-80fa-4c1345fe38e6",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Transcriptions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "hash",
+              "keyValue": "={{ $('Hashing').item.json.data }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        848,
+        0
+      ],
+      "id": "72510dcb-c2fa-4185-8515-df5377a27679",
+      "name": "Get Transcription If Made",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "c9Xf435KYATiW6Y3",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b006841d-31ce-4341-9e7c-a4e7f02faa08",
+              "leftValue": "={{ $items(\"Get Transcription If Made\")[0].json.isEmpty() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        0
+      ],
+      "id": "74bbaceb-e897-4412-a875-5d8bcf7e7293",
+      "name": "Check if Transcription Notes Are Already Made"
+    },
+    {
+      "parameters": {
+        "tableId": "Transcriptions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "hash",
+              "fieldValue": "={{ $('Hashing').item.json.data }}"
+            },
+            {
+              "fieldId": "individual_id",
+              "fieldValue": "={{ $('Combine to Structured').item.json.individual_id }}"
+            },
+            {
+              "fieldId": "text",
+              "fieldValue": "={{ $json.output.summary }}"
+            },
+            {
+              "fieldId": "version",
+              "fieldValue": "={{ $('Summary Versioning').item.json['Summaries Version'] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        64
+      ],
+      "id": "c841b9c4-abc9-4e60-b3e1-46eb47676672",
+      "name": "Store Transcription Output",
+      "credentials": {
+        "supabaseApi": {
+          "id": "c9Xf435KYATiW6Y3",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "record_id": 1,
+          "transcription": "For this appointment we'll check yuor teeth, we'll check how clean they are, check for cavities, and such and we'll see if we need to proceed with anything else like removing them, maybe giving you some toothpaste products to help clean them as well."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Combine to Structured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine to Structured": {
+      "main": [
+        [
+          {
+            "node": "Stringify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stringify": {
+      "main": [
+        [
+          {
+            "node": "Hashing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hashing": {
+      "main": [
+        [
+          {
+            "node": "Summary Versioning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary Versioning": {
+      "main": [
+        [
+          {
+            "node": "Get Transcription If Made",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Store Transcription Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transcription If Made": {
+      "main": [
+        [
+          {
+            "node": "Check if Transcription Notes Are Already Made",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Transcription Notes Are Already Made": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2067b5c4-59ff-40a5-bd7b-5a5669740f2a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"
+  },
+  "id": "u3qc23BlEzootpmT",
+  "tags": []
+}
