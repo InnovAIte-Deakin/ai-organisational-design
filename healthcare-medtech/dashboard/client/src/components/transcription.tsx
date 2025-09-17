@@ -75,6 +75,7 @@ function resampleAudio(audioData: Float32Array, originalSampleRate: number, targ
 export default function Transcription() {
   const [isRecording, setIsRecording] = useState(false);
   const [finalText, setFinalText] = useState("");
+  const [liveText, setLiveText] = useState(""); // For real-time display
   const [treatmentNotes, setTreatmentNotes] = useState<TreatmentNotes | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
@@ -191,10 +192,15 @@ export default function Transcription() {
 
       const text = result.text || '';
       if (text.trim()) {
-        setFinalText(prev => dedupeAppend(prev, text.trim()));
+        const newText = text.trim();
+        setLiveText(newText); // Show latest transcription immediately
+        setFinalText(prev => dedupeAppend(prev, newText));
       }
     } catch (error) {
       console.error('Transcription failed:', error);
+      // Show error in live text area briefly
+      setLiveText('(transcription error - retrying...)');
+      setTimeout(() => setLiveText(''), 2000);
     } finally {
       setIsTranscribing(false);
     }
@@ -279,10 +285,29 @@ export default function Transcription() {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           
           try {
+            // Ensure audio context is still available
+            if (!audioContextRef.current) {
+              console.warn('Audio context not available for decoding');
+              return;
+            }
+
             // Convert blob to audio data for Whisper
             const arrayBuffer = await audioBlob.arrayBuffer();
-            const audioBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer);
+            
+            // Check if arrayBuffer has data
+            if (arrayBuffer.byteLength === 0) {
+              console.warn('Empty audio buffer received');
+              return;
+            }
+
+            const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
             let audioData = audioBuffer.getChannelData(0);
+            
+            // Check if we have actual audio data
+            if (audioData.length === 0) {
+              console.warn('No audio data in buffer');
+              return;
+            }
             
             // Resample to 16kHz if needed
             if (audioBuffer.sampleRate !== 16000) {
@@ -292,38 +317,48 @@ export default function Transcription() {
             await transcribeAudioWithWhisper(audioData);
           } catch (error) {
             console.error('Error processing audio:', error);
+            // Don't show toast for every processing error to avoid spam
           }
         }
         
         // Clear chunks and restart if still recording
         audioChunks = [];
-        if (isRecording) {
+        if (isRecording && mediaRecorder.state === 'inactive') {
           setTimeout(() => {
             if (isRecording && mediaRecorder.state === 'inactive') {
-              mediaRecorder.start();
+              try {
+                mediaRecorder.start();
+              } catch (error) {
+                console.warn('Failed to restart recording:', error);
+              }
             }
-          }, 100);
+          }, 50);
         }
       };
 
-      // Start recording and set up 3-second intervals
+      // Start recording and set up 2-second intervals for more responsive transcription
       mediaRecorder.start();
       
       const recordingInterval = setInterval(() => {
         if (mediaRecorder.state === 'recording' && isRecording) {
           mediaRecorder.stop();
           setTimeout(() => {
-            if (isRecording) {
+            if (isRecording && mediaRecorder.state === 'inactive') {
               mediaRecorder.start();
             }
-          }, 100);
+          }, 50); // Reduced delay for faster restart
         }
-      }, 3000);
+      }, 2000); // Reduced interval for more responsive transcription
 
       // Store for cleanup
       (mediaRecorder as any).recordingInterval = recordingInterval;
+      if (!(window as any).recordingIntervals) {
+        (window as any).recordingIntervals = [];
+      }
+      (window as any).recordingIntervals.push(recordingInterval);
 
       setFinalText("");
+      setLiveText("");
       setIsRecording(true);
       toast({ title: "Recording Started", description: "Live Whisper transcription enabled." });
 
@@ -335,6 +370,7 @@ export default function Transcription() {
 
   const stopRecording = () => {
     setIsRecording(false);
+    setLiveText(""); // Clear live text when stopping
     
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
@@ -345,6 +381,11 @@ export default function Transcription() {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+
+    // Clear any recording intervals
+    const allIntervals = (window as any).recordingIntervals || [];
+    allIntervals.forEach((interval: number) => clearInterval(interval));
+    (window as any).recordingIntervals = [];
 
     toast({ title: "Recording Stopped", description: "Live transcription complete." });
   };
@@ -492,8 +533,23 @@ Treatment Plan: ${treatmentNotes.treatment_plan}
                 Transcribing...
               </p>
             )}
+            {/* Live transcription display */}
+            {isRecording && (
+              <div className="border-2 border-blue-300 p-3 rounded bg-blue-50 min-h-16 mt-4 text-sm">
+                <div className="text-xs text-blue-600 mb-1 font-medium">Live transcription:</div>
+                <div className="text-gray-700">
+                  {liveText || (isTranscribing ? 
+                    <span className="text-blue-500 italic">Processing audio...</span> : 
+                    <span className="text-gray-400 italic">Listening...</span>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Full accumulated transcription */}
             <div className="border p-3 rounded bg-gray-50 min-h-24 mt-4 text-sm text-gray-700">
-              {finalText || <span className="text-gray-400">Whisper transcription will appear here...</span>}
+              <div className="text-xs text-gray-600 mb-2 font-medium">Full transcription:</div>
+              {finalText || <span className="text-gray-400">Complete transcription will appear here...</span>}
             </div>
           </div>
           <div className="flex gap-3">
