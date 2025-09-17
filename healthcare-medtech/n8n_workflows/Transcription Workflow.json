@@ -266,6 +266,19 @@
       "id": "667bacfa-cd88-4919-8c6f-0a7795f4c490",
       "name": "Edit Fields",
       "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const obj = JSON.parse($input.first().json.text);\nreturn obj;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        -128
+      ],
+      "id": "cce8bc16-abae-4310-a63a-0387aa4c19b4",
+      "name": "Code in JavaScript"
     }
   ],
   "pinData": {
@@ -380,7 +393,13 @@
     },
     "Check if Transcription Notes Are Already Made": {
       "main": [
-        [],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Basic LLM Chain",
@@ -406,7 +425,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "9efc0e41-cab5-4673-9407-564eb97e0941",
+  "versionId": "ac6f84a3-07ec-4bc5-818c-cd9f853d26e9",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"
