@@ -269,7 +269,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const obj = JSON.parse($input.first().json.text);\nreturn obj;\n"
+        "jsCode": "const obj = JSON.parse($input.first().json.text);\nreturn [{\"output\": obj}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -425,7 +425,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "ac6f84a3-07ec-4bc5-818c-cd9f853d26e9",
+  "versionId": "9a939001-7e21-4f5d-806e-cb5c96584172",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"
