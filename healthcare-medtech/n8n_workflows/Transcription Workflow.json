@@ -114,7 +114,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a clinical summarization assistant. Using the following data:\n\n{{ $('Stringify').item.json.result }}\n\nGenerate a structured, clinic-focused summary of the patient's recent dental history.\n\n1. **General Patient Information**\n   - Summarize demographics (full name, date of birth, ID number, address, phone).\n\n2. **Appointments (Organized by Staff)**\n   - Group appointments by each staff member involved.\n   - For each, list: appointment date, role (attendant/assistant), attendance status, and collaborating staff.\n\n3. **Dentist Notes (Chronological)**\n   - Present notes in order of occurrence.\n   - For each entry, include: appointment type, clinical findings, treatments performed, and changes compared to prior visits.\n   - Be detailed\n\n4. **Overall Clinical Summary**\n   - Provide a concise narrative overview of the patient's dental course.\n   - Highlight recurring conditions, treatment progress, and outcomes.\n   - Identify areas needing follow-up or monitoring.\n   - Be detailed\n\nFormat the output for **professional use in a dental clinic**, emphasizing clarity, conciseness, and clinical relevance.",
+        "text": "=You are a clinical transcription assistant. Using the following data:  \n\n{{ $('Stringify').item.json.result }}  \n\nGenerate structured **dentistry SOAP notes** from this transcription, ignoring any unrelated conversation or non-clinical remarks.  \n\n1. **Subjective (S)**  \n   - Summarize the patient’s reported concerns, symptoms, or reasons for the visit.  \n   - Capture any patient-reported history relevant to dental care.  \n\n2. **Objective (O)**  \n   - Record clinical findings from the exam (e.g., oral health status, periodontal condition, caries, restorations, occlusion).  \n   - Note diagnostic tests or imaging results if mentioned.  \n\n3. **Assessment (A)**  \n   - Provide the professional interpretation of findings.  \n   - Include diagnoses, recurring conditions, and comparisons to previous visits.  \n\n4. **Plan (P)**  \n   - Detail treatments performed during the appointment.  \n   - Document follow-up needs, preventive advice, and next scheduled procedures.  \n\nFormat the output for **professional clinical documentation** in a dental practice, ensuring clarity, conciseness, and clinical relevance.  ",
         "hasOutputParser": true,
         "batching": {}
       },
@@ -130,7 +130,7 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"summary\": {\n\t\t\t\"type\": \"string\"\n\t\t}\n\t}\n}"
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"s\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"o\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"a\": {\n\t\t\t\"type\": \"string\"\n\t\t},\n\t\t\"p\": {\n\t\t\t\"type\": \"string\"\n\t\t}\n\t}\n}"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
@@ -371,7 +371,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2067b5c4-59ff-40a5-bd7b-5a5669740f2a",
+  "versionId": "5d74e951-8915-46ea-bcb4-01523d0445d7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"

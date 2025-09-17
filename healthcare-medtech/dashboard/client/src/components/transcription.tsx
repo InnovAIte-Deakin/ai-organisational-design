@@ -32,6 +32,13 @@ interface TreatmentNotes {
   treatment_plan: string;
 }
 
+interface SOAPNotes {
+  s: string; // Subjective
+  o: string; // Objective
+  a: string; // Assessment
+  p: string; // Plan
+}
+
 interface ProgressItem {
   file: string;
   loaded: number;
@@ -174,16 +181,68 @@ const createTranscriptionWorker = () => {
   return new Worker(URL.createObjectURL(blob), { type: 'module' });
 };
 
-function dedupeAppend(prev: string, next: string, overlapWords = 8) {
+function dedupeAppend(prev: string, next: string, overlapWords = 12) {
   const p = prev.trim();
   const n = next.trim();
+  
+  // If previous is empty, return next
   if (!p) return n;
-  const pWords = p.split(/\s+/);
-  const tail = pWords.slice(-overlapWords).join(" ");
-  const idx = n.toLowerCase().indexOf(tail.toLowerCase());
-  if (idx === 0) return (p + " " + n.slice(tail.length)).trim();
+  
+  // If next is empty or same as previous, return previous
+  if (!n || p === n) return p;
+  
+  // If next is completely contained in previous, return previous
   if (p.toLowerCase().includes(n.toLowerCase())) return p;
+  
+  // If previous is completely contained in next, return next
+  if (n.toLowerCase().includes(p.toLowerCase())) return n;
+  
+  // Try to find overlap at the end of previous and beginning of next
+  const pWords = p.split(/\s+/);
+  const nWords = n.split(/\s+/);
+  
+  // Look for overlap with different word counts
+  for (let overlap = Math.min(overlapWords, pWords.length, nWords.length); overlap > 0; overlap--) {
+    const pTail = pWords.slice(-overlap).join(" ").toLowerCase();
+    const nHead = nWords.slice(0, overlap).join(" ").toLowerCase();
+    
+    if (pTail === nHead) {
+      // Found overlap, merge by removing the overlapping part from next
+      const remainingNext = nWords.slice(overlap).join(" ");
+      return remainingNext ? (p + " " + remainingNext).trim() : p;
+    }
+  }
+  
+  // No overlap found, check if next starts with any part of previous end
+  const lastSentence = p.split(/[.!?]/).pop()?.trim() || "";
+  if (lastSentence && n.toLowerCase().startsWith(lastSentence.toLowerCase())) {
+    // Next starts with the last sentence of previous, replace the last sentence
+    const beforeLastSentence = p.substring(0, p.lastIndexOf(lastSentence)).trim();
+    return beforeLastSentence ? (beforeLastSentence + " " + n).trim() : n;
+  }
+  
+  // No overlap, append with space
   return (p + " " + n).trim();
+}
+
+// Smart text merger for streaming transcription
+function smartMergeTranscription(current: string, newChunk: string): string {
+  const c = current.trim();
+  const n = newChunk.trim();
+  
+  // If current is empty, use new chunk
+  if (!c) return n;
+  
+  // If new chunk is empty, keep current
+  if (!n) return c;
+  
+  // If new chunk is much longer and contains current, it's likely a replacement
+  if (n.length > c.length * 1.5 && n.toLowerCase().includes(c.toLowerCase())) {
+    return n;
+  }
+  
+  // Use deduplication for incremental updates
+  return dedupeAppend(c, n);
 }
 
 // Helper function to resample audio
@@ -212,7 +271,9 @@ export default function Transcription() {
   const [isRecording, setIsRecording] = useState(false);
   const [finalText, setFinalText] = useState("");
   const [liveText, setLiveText] = useState(""); // For real-time display
+  const [editableText, setEditableText] = useState(""); // For editable transcription
   const [treatmentNotes, setTreatmentNotes] = useState<TreatmentNotes | null>(null);
+  const [soapNotes, setSoapNotes] = useState<SOAPNotes | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
@@ -224,6 +285,7 @@ export default function Transcription() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const isRecordingRef = useRef<boolean>(false);
+  const lastProcessedTextRef = useRef<string>("");
   const { toast } = useToast();
 
   // Configuration
@@ -258,22 +320,59 @@ export default function Transcription() {
             break;
           case "update":
             const updateMessage = message;
+            const newText = updateMessage.data[0];
+            
+            // Skip if this is the same text we just processed
+            if (newText === lastProcessedTextRef.current) {
+              break;
+            }
+            lastProcessedTextRef.current = newText;
+            
             setTranscript({
               isBusy: true,
-              text: updateMessage.data[0],
+              text: newText,
               chunks: updateMessage.data[1].chunks,
             });
-            setLiveText(updateMessage.data[0]);
-            setFinalText(updateMessage.data[0]);
+            
+            // For live text, show just the new part or latest sentence
+            const sentences = newText.split(/[.!?]+/).filter(s => s.trim());
+            const latestSentence = sentences[sentences.length - 1]?.trim() || newText;
+            setLiveText(latestSentence);
+            
+            // For editable text, use smart merging to avoid repetition
+            setEditableText(prev => {
+              const merged = smartMergeTranscription(prev, newText);
+              return merged;
+            });
+            
+            // Update final text with the same smart merging
+            setFinalText(prev => {
+              const merged = smartMergeTranscription(prev, newText);
+              return merged;
+            });
             break;
+            
           case "complete":
             const completeMessage = message;
+            const completedText = completeMessage.data.text;
             setTranscript({
               isBusy: false,
-              text: completeMessage.data.text,
+              text: completedText,
               chunks: completeMessage.data.chunks,
             });
-            setFinalText(completeMessage.data.text);
+            
+            // Clear live text when complete
+            setLiveText("");
+            
+            // For completion, use smart merging to ensure we have the final, clean text
+            setFinalText(prev => {
+              const merged = smartMergeTranscription(prev, completedText);
+              return merged;
+            });
+            setEditableText(prev => {
+              const merged = smartMergeTranscription(prev, completedText);
+              return merged;
+            });
             setIsTranscribing(false);
             break;
           case "initiate":
@@ -362,29 +461,40 @@ export default function Transcription() {
 
   const processTranscriptionMutation = useMutation({
     mutationFn: async (transcription: string) => {
-      const appointment: any = await apiRequest("POST", "/api/appointments", {
-        patientId: "temp-patient",
-        appointmentDate: new Date().toISOString(),
-        type: "transcription",
-        status: "completed",
-      });
+      // Generate a temporary record ID (in a real app, this would come from the patient record)
+      const record_id = Date.now(); // Using timestamp as temporary ID
+      
       const result = await apiRequest(
         "POST",
-        `/api/appointments/${appointment.id}/transcription`,
-        { transcription }
+        "/api/transcription/process",
+        { 
+          record_id: record_id,
+          transcription: transcription 
+        }
       );
       return result;
     },
     onSuccess: (data: any) => {
-      if (data.treatmentNotes) {
-        setTreatmentNotes(data.treatmentNotes);
-        toast({ title: "Success", description: "Transcription processed and treatment notes generated" });
+      if (data.success && data.soapNotes) {
+        setSoapNotes(data.soapNotes);
+        toast({ 
+          title: "SOAP Notes Generated", 
+          description: "Transcription processed and SOAP notes generated successfully" 
+        });
       } else {
-        toast({ title: "Success", description: "Transcription processed" });
+        toast({ 
+          title: "Processing Complete", 
+          description: "Transcription processed but no SOAP notes generated" 
+        });
       }
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to process transcription", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Transcription processing error:', error);
+      toast({ 
+        title: "Processing Failed", 
+        description: error.message || "Failed to process transcription with AI", 
+        variant: "destructive" 
+      });
     },
   });
 
@@ -498,9 +608,10 @@ export default function Transcription() {
       }
       (window as any).recordingIntervals.push(recordingInterval);
 
-      setFinalText("");
+      // Don't clear existing text when starting recording - extend instead
       setLiveText("");
       setTranscript(undefined);
+      lastProcessedTextRef.current = ""; // Reset the last processed text
       setIsRecording(true);
       isRecordingRef.current = true;
       toast({ title: "Recording Started", description: "Live client-side transcription enabled." });
@@ -535,13 +646,16 @@ export default function Transcription() {
       }
     }, 1000);
 
+    // Update final text with the current editable text
+    setFinalText(editableText);
+
     toast({ title: "Recording Stopped", description: "Live transcription complete." });
   };
 
   const toggleRecording = () => (isRecording ? stopRecording() : startRecording());
 
   const handleProcessTranscription = () => {
-    const transcript = finalText.trim();
+    const transcript = (editableText || finalText).trim();
     if (!transcript) {
       toast({ title: "Error", description: "Record audio first.", variant: "destructive" });
       return;
@@ -550,7 +664,7 @@ export default function Transcription() {
   };
 
   const handleFinalizeAndSave = async () => {
-    const transcript = finalText.trim();
+    const transcript = (editableText || finalText).trim();
     if (!transcript) {
       toast({ title: "Error", description: "Record audio first.", variant: "destructive" });
       return;
@@ -560,29 +674,33 @@ export default function Transcription() {
       setIsSaving(true);
       
       // Create a downloadable file
-      const content = `Dental Appointment Transcription
+      const content = `Dental Appointment Transcription & SOAP Notes
 Generated: ${new Date().toLocaleString()}
 
 TRANSCRIPTION:
 ${transcript}
 
-${treatmentNotes ? `
-TREATMENT NOTES:
+${soapNotes ? `
+SOAP NOTES:
 
-Chief Complaint: ${treatmentNotes.chief_complaint}
+SUBJECTIVE:
+${soapNotes.s}
 
-Examination: ${treatmentNotes.examination}
+OBJECTIVE:
+${soapNotes.o}
 
-Diagnosis: ${treatmentNotes.diagnosis}
+ASSESSMENT:
+${soapNotes.a}
 
-Treatment Plan: ${treatmentNotes.treatment_plan}
+PLAN:
+${soapNotes.p}
 ` : ''}`;
 
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `appointment-notes-${new Date().toISOString().split('T')[0]}.txt`;
+      a.download = `soap-notes-${new Date().toISOString().split('T')[0]}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -691,27 +809,51 @@ Treatment Plan: ${treatmentNotes.treatment_plan}
             )}
             {/* Live transcription display */}
             {isRecording && (
-              <div className="border-2 border-blue-300 p-3 rounded bg-blue-50 min-h-16 mt-4 text-sm">
-                <div className="text-xs text-blue-600 mb-1 font-medium">Live transcription:</div>
-                <div className="text-gray-700">
-                  {liveText || (isTranscribing ? 
-                    <span className="text-blue-500 italic">Processing audio...</span> : 
-                    <span className="text-gray-400 italic">Listening...</span>
-                  )}
-                </div>
+              <div className="border-2 border-blue-300 rounded bg-blue-50 mt-4">
+                <div className="text-xs text-blue-600 p-2 pb-1 font-medium">Live transcription (editable):</div>
+                <textarea
+                  value={editableText}
+                  onChange={(e) => setEditableText(e.target.value)}
+                  placeholder={isTranscribing ? "Processing audio..." : "Listening..."}
+                  className="w-full min-h-16 p-2 pt-0 text-sm text-gray-700 bg-transparent border-none resize-none focus:outline-none"
+                  style={{ minHeight: '64px' }}
+                />
+                {isTranscribing && (
+                  <div className="px-2 pb-2">
+                    <span className="text-xs text-blue-500 italic flex items-center">
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Processing...
+                    </span>
+                  </div>
+                )}
               </div>
             )}
             
-            {/* Full accumulated transcription */}
-            <div className="border p-3 rounded bg-gray-50 min-h-24 mt-4 text-sm text-gray-700">
-              <div className="text-xs text-gray-600 mb-2 font-medium">Full transcription:</div>
-              {finalText || <span className="text-gray-400">Complete transcription will appear here...</span>}
+            {/* Full accumulated transcription - also editable when not recording */}
+            <div className="border rounded bg-gray-50 mt-4">
+              <div className="text-xs text-gray-600 p-2 pb-1 font-medium">
+                {isRecording ? "Current session transcription:" : "Full transcription (editable):"}
+              </div>
+              <textarea
+                value={isRecording ? editableText : (editableText || finalText)}
+                onChange={(e) => {
+                  if (isRecording) {
+                    setEditableText(e.target.value);
+                  } else {
+                    setEditableText(e.target.value);
+                    setFinalText(e.target.value);
+                  }
+                }}
+                placeholder="Complete transcription will appear here..."
+                className="w-full min-h-24 p-2 pt-0 text-sm text-gray-700 bg-transparent border-none resize-none focus:outline-none"
+                style={{ minHeight: '96px' }}
+              />
             </div>
           </div>
           <div className="flex gap-3">
             <Button 
               onClick={handleProcessTranscription} 
-              disabled={!finalText || processTranscriptionMutation.isPending}
+              disabled={!(editableText || finalText) || processTranscriptionMutation.isPending}
             >
               <Bot className="h-4 w-4 mr-2" />
               {processTranscriptionMutation.isPending ? (
@@ -723,27 +865,74 @@ Treatment Plan: ${treatmentNotes.treatment_plan}
                 "Process with AI"
               )}
             </Button>
-            <Button onClick={handleFinalizeAndSave} disabled={!finalText || isSaving}>
+            <Button onClick={handleFinalizeAndSave} disabled={!(editableText || finalText) || isSaving}>
               {isSaving ? "Saving…" : "Download Notes"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* AI-generated Treatment Notes */}
+      {/* AI-generated SOAP Notes */}
       <Card>
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-4">AI-Generated Treatment Notes</h3>
-          {["chief_complaint", "examination", "diagnosis", "treatment_plan"].map(field => (
-            <div key={field} className="border p-4 rounded mb-4">
-              <h4 className="text-sm font-semibold text-medical-blue-900 mb-2">
-                {field.replace("_", " ").toUpperCase()}
-              </h4>
-              <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                {treatmentNotes?.[field as keyof TreatmentNotes] || <span className="text-gray-400">AI will generate...</span>}
-              </div>
+          <h3 className="text-lg font-semibold mb-4">AI-Generated SOAP Notes</h3>
+          
+          {/* Subjective */}
+          <div className="border p-4 rounded mb-4">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center">
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs mr-2">S</span>
+              SUBJECTIVE
+            </h4>
+            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
+              {soapNotes?.s || <span className="text-gray-400">Patient's reported symptoms and concerns will appear here...</span>}
             </div>
-          ))}
+          </div>
+
+          {/* Objective */}
+          <div className="border p-4 rounded mb-4">
+            <h4 className="text-sm font-semibold text-green-900 mb-2 flex items-center">
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs mr-2">O</span>
+              OBJECTIVE
+            </h4>
+            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
+              {soapNotes?.o || <span className="text-gray-400">Clinical observations and examination findings will appear here...</span>}
+            </div>
+          </div>
+
+          {/* Assessment */}
+          <div className="border p-4 rounded mb-4">
+            <h4 className="text-sm font-semibold text-orange-900 mb-2 flex items-center">
+              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs mr-2">A</span>
+              ASSESSMENT
+            </h4>
+            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
+              {soapNotes?.a || <span className="text-gray-400">Clinical diagnosis and assessment will appear here...</span>}
+            </div>
+          </div>
+
+          {/* Plan */}
+          <div className="border p-4 rounded mb-4">
+            <h4 className="text-sm font-semibold text-purple-900 mb-2 flex items-center">
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs mr-2">P</span>
+              PLAN
+            </h4>
+            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
+              {soapNotes?.p || <span className="text-gray-400">Treatment plan and next steps will appear here...</span>}
+            </div>
+          </div>
+
+          {/* Processing Status */}
+          {processTranscriptionMutation.isPending && (
+            <div className="border-2 border-blue-200 bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600 mr-2" />
+                <span className="text-blue-800 font-medium">Processing transcription with AI...</span>
+              </div>
+              <p className="text-blue-600 text-sm text-center mt-2">
+                Generating SOAP notes from your transcription
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

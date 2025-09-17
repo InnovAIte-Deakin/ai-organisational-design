@@ -456,6 +456,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Process transcription with AI (SOAP notes generation)
+  app.post("/api/transcription/process", async (req, res) => {
+    try {
+      console.log('🎤 Processing transcription with AI...');
+      
+      const { record_id, transcription } = req.body;
+      
+      if (!transcription || !record_id) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required fields: record_id and transcription"
+        });
+      }
+
+      console.log(`Processing transcription for record ID: ${record_id}`);
+      console.log(`Transcription length: ${transcription.length} characters`);
+
+      // Check MCP server availability
+      const mcpAvailable = await mcpServerClient.isServerAvailable();
+      console.log(`MCP Server Status: ${mcpAvailable ? '✅ Available' : '❌ Unavailable'}`);
+      
+      if (!mcpAvailable) {
+        return res.status(503).json({
+          success: false,
+          error: "MCP server is not available. Please ensure the MCP server is running.",
+          fallback: true
+        });
+      }
+
+      // Call the transcription workflow via MCP
+      const mcpResponse = await mcpServerClient.callTool("Transcription to SOAP", {
+        record_id: parseInt(record_id),
+        transcription: transcription
+      });
+
+      console.log("MCP Response received:", mcpResponse);
+
+      // Parse the response to extract SOAP notes
+      let soapNotes = null;
+      
+      if (mcpResponse && mcpResponse.content && mcpResponse.content.length > 0) {
+        const content = mcpResponse.content[0];
+        
+        try {
+          let responseData;
+          if (content.type === 'text' && content.text) {
+            responseData = JSON.parse(content.text);
+          } else if (typeof content === 'string') {
+            responseData = JSON.parse(content);
+          } else {
+            responseData = content;
+          }
+          
+          // Extract SOAP notes from the structured response
+          if (responseData && responseData.s && responseData.o && responseData.a && responseData.p) {
+            soapNotes = {
+              s: responseData.s, // Subjective
+              o: responseData.o, // Objective
+              a: responseData.a, // Assessment
+              p: responseData.p  // Plan
+            };
+            console.log("✅ Successfully extracted SOAP notes from MCP response");
+          } else {
+            console.warn("⚠️ MCP response doesn't contain expected SOAP structure");
+          }
+        } catch (parseError) {
+          console.error("❌ Failed to parse MCP response as JSON:", parseError);
+          // Try to extract text content as fallback
+          if (content.type === 'text' && content.text) {
+            soapNotes = {
+              s: "Unable to parse structured response",
+              o: "Raw response: " + content.text.substring(0, 200) + "...",
+              a: "Parsing error occurred",
+              p: "Please review the raw transcription"
+            };
+          }
+        }
+      }
+
+      if (!soapNotes) {
+        return res.status(500).json({
+          success: false,
+          error: "Failed to generate SOAP notes from transcription",
+          rawResponse: mcpResponse
+        });
+      }
+
+      res.json({
+        success: true,
+        soapNotes: soapNotes,
+        recordId: record_id,
+        processedAt: new Date().toISOString(),
+        transcriptionLength: transcription.length
+      });
+
+    } catch (error: any) {
+      console.error('❌ Error processing transcription:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
