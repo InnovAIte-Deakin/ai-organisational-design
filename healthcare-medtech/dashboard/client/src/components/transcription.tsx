@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast"; 
 import { Mic, Square, Bot, Loader2, Download } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { pipeline, Pipeline, env } from '@xenova/transformers';
-
-// Configure Whisper for browser use with better error handling
-env.allowRemoteModels = true;
-env.allowLocalModels = true;
-env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
 
 // Add custom fetch with better error handling for model loading
 const originalFetch = globalThis.fetch;
@@ -37,6 +31,148 @@ interface TreatmentNotes {
   diagnosis: string;
   treatment_plan: string;
 }
+
+interface ProgressItem {
+  file: string;
+  loaded: number;
+  progress: number;
+  total: number;
+  name: string;
+  status: string;
+}
+
+interface TranscriberData {
+  isBusy: boolean;
+  text: string;
+  chunks: { text: string; timestamp: [number, number | null] }[];
+}
+
+// Web Worker for Whisper transcription
+const createTranscriptionWorker = () => {
+  const workerCode = `
+    import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js";
+
+    // Disable local models
+    env.allowLocalModels = false;
+
+    class PipelineFactory {
+      static task = null;
+      static model = null;
+      static quantized = null;
+      static instance = null;
+
+      static async getInstance(progress_callback = null) {
+        if (this.instance === null) {
+          this.instance = pipeline(this.task, this.model, {
+            quantized: this.quantized,
+            progress_callback,
+            revision: this.model.includes("/whisper-medium") ? "no_attentions" : "main"
+          });
+        }
+        return this.instance;
+      }
+    }
+
+    class AutomaticSpeechRecognitionPipelineFactory extends PipelineFactory {
+      static task = "automatic-speech-recognition";
+      static model = null;
+      static quantized = null;
+    }
+
+    const transcribe = async (audio, model, multilingual, quantized, subtask, language) => {
+      const isDistilWhisper = model.startsWith("distil-whisper/");
+      let modelName = model;
+      if (!isDistilWhisper && !multilingual) {
+        modelName += ".en"
+      }
+
+      const p = AutomaticSpeechRecognitionPipelineFactory;
+      if (p.model !== modelName || p.quantized !== quantized) {
+        p.model = modelName;
+        p.quantized = quantized;
+        if (p.instance !== null) {
+          (await p.getInstance()).dispose();
+          p.instance = null;
+        }
+      }
+
+      let transcriber = await p.getInstance((data) => {
+        self.postMessage(data);
+      });
+
+      const time_precision = transcriber.processor.feature_extractor.config.chunk_length / transcriber.model.config.max_source_positions;
+
+      let chunks_to_process = [{ tokens: [], finalised: false }];
+
+      function chunk_callback(chunk) {
+        let last = chunks_to_process[chunks_to_process.length - 1];
+        Object.assign(last, chunk);
+        last.finalised = true;
+        if (!chunk.is_last) {
+          chunks_to_process.push({ tokens: [], finalised: false });
+        }
+      }
+
+      function callback_function(item) {
+        let last = chunks_to_process[chunks_to_process.length - 1];
+        last.tokens = [...item[0].output_token_ids];
+        let data = transcriber.tokenizer._decode_asr(chunks_to_process, {
+          time_precision: time_precision,
+          return_timestamps: true,
+          force_full_sequences: false,
+        });
+        self.postMessage({
+          status: "update",
+          task: "automatic-speech-recognition",
+          data: data,
+        });
+      }
+
+      let output = await transcriber(audio, {
+        top_k: 0,
+        do_sample: false,
+        chunk_length_s: isDistilWhisper ? 20 : 30,
+        stride_length_s: isDistilWhisper ? 3 : 5,
+        language: language,
+        task: subtask,
+        return_timestamps: true,
+        force_full_sequences: false,
+        callback_function: callback_function,
+        chunk_callback: chunk_callback,
+      }).catch((error) => {
+        self.postMessage({
+          status: "error",
+          task: "automatic-speech-recognition",
+          data: error,
+        });
+        return null;
+      });
+
+      return output;
+    };
+
+    self.addEventListener("message", async (event) => {
+      const message = event.data;
+      let transcript = await transcribe(
+        message.audio,
+        message.model,
+        message.multilingual,
+        message.quantized,
+        message.subtask,
+        message.language,
+      );
+      if (transcript === null) return;
+      self.postMessage({
+        status: "complete",
+        task: "automatic-speech-recognition",
+        data: transcript,
+      });
+    });
+  `;
+
+  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  return new Worker(URL.createObjectURL(blob), { type: 'module' });
+};
 
 function dedupeAppend(prev: string, next: string, overlapWords = 8) {
   const p = prev.trim();
@@ -81,131 +217,148 @@ export default function Transcription() {
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
+  const [transcript, setTranscript] = useState<TranscriberData | undefined>(undefined);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const whisperPipelineRef = useRef<Pipeline | null>(null);
+  const workerRef = useRef<Worker | null>(null);
   const isRecordingRef = useRef<boolean>(false);
   const { toast } = useToast();
 
-  // Load Whisper model with multiple fallback strategies
-  const loadWhisperModel = async () => {
-    if (whisperPipelineRef.current) return;
-    
+  // Configuration
+  const model = "Xenova/whisper-tiny";
+  const quantized = true;
+  const multilingual = false;
+  const subtask = "transcribe";
+  const language = "english";
+
+  // Initialize web worker for transcription
+  const initializeWorker = useCallback(() => {
+    if (workerRef.current) return;
+
     try {
-      setIsModelLoading(true);
-      console.log('Loading Whisper model...');
+      console.log('🚀 Initializing Whisper Web Worker...');
+      const worker = createTranscriptionWorker();
       
-      // List of models to try in order of preference
-      const modelsToTry = [
-        'Xenova/whisper-tiny.en',
-        'Xenova/whisper-tiny',
-        'openai/whisper-tiny.en'
-      ];
-      
-      let transcriber = null;
-      let lastError = null;
-      
-      for (const modelName of modelsToTry) {
-        try {
-          console.log(`Attempting to load: ${modelName}`);
-          
-          // Try with minimal configuration first
-          transcriber = await pipeline('automatic-speech-recognition', modelName);
-          
-          console.log(`Successfully loaded: ${modelName}`);
-          break;
-        } catch (error) {
-          console.warn(`Failed to load ${modelName}:`, error);
-          lastError = error;
-          
-          // If it's the JSON parsing error, try a different approach
-          if (error instanceof SyntaxError && error.message.includes('DOCTYPE')) {
-            console.log('Detected HTML response instead of JSON, trying alternative approach...');
-            
-            // Try with different configuration
-            try {
-              transcriber = await pipeline('automatic-speech-recognition', modelName, {
-                revision: 'main',
-                quantized: true
-              });
-              console.log(`Successfully loaded ${modelName} with alternative config`);
-              break;
-            } catch (altError) {
-              console.warn(`Alternative config also failed for ${modelName}:`, altError);
-            }
-          }
-          
-          continue;
+      worker.addEventListener("message", (event) => {
+        const message = event.data;
+        console.log('Worker message:', message.status);
+        
+        switch (message.status) {
+          case "progress":
+            setProgressItems((prev) =>
+              prev.map((item) => {
+                if (item.file === message.file) {
+                  return { ...item, progress: message.progress };
+                }
+                return item;
+              }),
+            );
+            break;
+          case "update":
+            const updateMessage = message;
+            setTranscript({
+              isBusy: true,
+              text: updateMessage.data[0],
+              chunks: updateMessage.data[1].chunks,
+            });
+            setLiveText(updateMessage.data[0]);
+            setFinalText(updateMessage.data[0]);
+            break;
+          case "complete":
+            const completeMessage = message;
+            setTranscript({
+              isBusy: false,
+              text: completeMessage.data.text,
+              chunks: completeMessage.data.chunks,
+            });
+            setFinalText(completeMessage.data.text);
+            setIsTranscribing(false);
+            break;
+          case "initiate":
+            setIsModelLoading(true);
+            setProgressItems((prev) => [...prev, message]);
+            break;
+          case "ready":
+            setIsModelLoading(false);
+            setIsModelLoaded(true);
+            toast({
+              title: "Whisper Model Loaded",
+              description: "Ready for high-quality client-side transcription",
+            });
+            break;
+          case "error":
+            setIsTranscribing(false);
+            setIsModelLoading(false);
+            console.error('Worker error:', message.data);
+            toast({
+              title: "Transcription Error",
+              description: message.data.message || "Transcription failed",
+              variant: "destructive",
+            });
+            break;
+          case "done":
+            setProgressItems((prev) =>
+              prev.filter((item) => item.file !== message.file),
+            );
+            break;
         }
-      }
-      
-      if (!transcriber) {
-        // If all models fail, show a helpful error message
-        throw new Error(`All Whisper models failed to load. This might be due to network restrictions or CORS issues. Last error: ${lastError?.message}`);
-      }
-      
-      whisperPipelineRef.current = transcriber;
-      setIsModelLoaded(true);
-      console.log('Whisper model loaded successfully');
-      
-      toast({
-        title: "Whisper Model Loaded",
-        description: "Ready for high-quality transcription",
       });
+
+      workerRef.current = worker;
+      setIsModelLoaded(true);
+      console.log('✅ Web Worker initialized successfully');
+      
     } catch (error) {
-      console.error('Failed to load Whisper model:', error);
-      
-      // Provide more specific error messages
-      let errorMessage = "Could not load Whisper model.";
-      if (error instanceof Error) {
-        if (error.message.includes('DOCTYPE')) {
-          errorMessage = "Network issue: Getting HTML instead of model files. Try refreshing or check your internet connection.";
-        } else if (error.message.includes('CORS')) {
-          errorMessage = "CORS issue: Model loading blocked by browser security. Try using a different browser or network.";
-        } else if (error.message.includes('fetch')) {
-          errorMessage = "Network error: Cannot download model files. Check your internet connection.";
-        }
-      }
-      
+      console.error('❌ Failed to initialize worker:', error);
       toast({
-        title: "Model Loading Failed",
-        description: errorMessage,
+        title: "Worker Initialization Failed",
+        description: "Could not initialize transcription worker",
         variant: "destructive",
       });
-    } finally {
-      setIsModelLoading(false);
     }
-  };
+  }, [toast]);
 
-  // Transcribe audio with Whisper
-  const transcribeAudioWithWhisper = async (audioData: Float32Array) => {
-    if (!whisperPipelineRef.current) return;
-    
+  // Transcribe audio with Web Worker
+  const transcribeAudioWithWorker = useCallback((audioBuffer: AudioBuffer) => {
+    if (!workerRef.current) {
+      console.warn('Worker not initialized');
+      return;
+    }
+
     try {
       setIsTranscribing(true);
       
-      const result = await whisperPipelineRef.current(audioData, {
-        language: 'english',
-        task: 'transcribe',
-        return_timestamps: false,
-      });
-
-      const text = result.text || '';
-      if (text.trim()) {
-        const newText = text.trim();
-        setLiveText(newText); // Show latest transcription immediately
-        setFinalText(prev => dedupeAppend(prev, newText));
+      // Convert stereo to mono if needed
+      let audio;
+      if (audioBuffer.numberOfChannels === 2) {
+        const SCALING_FACTOR = Math.sqrt(2);
+        let left = audioBuffer.getChannelData(0);
+        let right = audioBuffer.getChannelData(1);
+        audio = new Float32Array(left.length);
+        for (let i = 0; i < audioBuffer.length; ++i) {
+          audio[i] = SCALING_FACTOR * (left[i] + right[i]) / 2;
+        }
+      } else {
+        audio = audioBuffer.getChannelData(0);
       }
+
+      // Send to worker
+      workerRef.current.postMessage({
+        audio,
+        model,
+        multilingual,
+        quantized,
+        subtask: multilingual ? subtask : null,
+        language: multilingual && language !== "auto" ? language : null,
+      });
+      
     } catch (error) {
-      console.error('Transcription failed:', error);
-      // Show error in live text area briefly
-      setLiveText('(transcription error - retrying...)');
-      setTimeout(() => setLiveText(''), 2000);
-    } finally {
+      console.error('Failed to send audio to worker:', error);
       setIsTranscribing(false);
     }
-  };
+  }, [model, multilingual, quantized, subtask, language]);
 
   const processTranscriptionMutation = useMutation({
     mutationFn: async (transcription: string) => {
@@ -236,10 +389,10 @@ export default function Transcription() {
   });
 
   const startRecording = async () => {
-    if (!whisperPipelineRef.current) {
+    if (!workerRef.current) {
       toast({ 
-        title: "Model Not Loaded", 
-        description: "Please load the Whisper model first.", 
+        title: "Worker Not Ready", 
+        description: "Please wait for the transcription worker to initialize.", 
         variant: "destructive" 
       });
       return;
@@ -261,8 +414,8 @@ export default function Transcription() {
       });
       streamRef.current = stream;
 
-      // Create a dedicated audio context for processing that won't be closed during recording
-      const processingAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+      // Create audio context for processing
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 16000
       });
       
@@ -280,45 +433,28 @@ export default function Transcription() {
       };
 
       mediaRecorder.onstop = async () => {
-        if (audioChunks.length > 0 && isRecordingRef.current) {
+        if (audioChunks.length > 0 && isRecordingRef.current && audioContextRef.current) {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           
           try {
-            // Create a fresh audio context for each processing if needed
-            let contextToUse = processingAudioContext;
-            if (contextToUse.state === 'closed') {
-              contextToUse = new (window.AudioContext || (window as any).webkitAudioContext)({
-                sampleRate: 16000
-              });
-            }
-
-            // Convert blob to audio data for Whisper
             const arrayBuffer = await audioBlob.arrayBuffer();
             
-            // Check if arrayBuffer has data
             if (arrayBuffer.byteLength === 0) {
               console.warn('Empty audio buffer received');
               return;
             }
 
-            const audioBuffer = await contextToUse.decodeAudioData(arrayBuffer);
-            let audioData = audioBuffer.getChannelData(0);
+            const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
             
-            // Check if we have actual audio data
-            if (audioData.length === 0) {
+            if (audioBuffer.length === 0) {
               console.warn('No audio data in buffer');
               return;
             }
             
-            // Resample to 16kHz if needed
-            if (audioBuffer.sampleRate !== 16000) {
-              audioData = resampleAudio(audioData, audioBuffer.sampleRate, 16000);
-            }
-            
-            await transcribeAudioWithWhisper(audioData);
+            // Send to worker for transcription
+            transcribeAudioWithWorker(audioBuffer);
           } catch (error) {
             console.error('Error processing audio:', error);
-            // Don't show toast for every processing error to avoid spam
           }
         }
         
@@ -337,10 +473,7 @@ export default function Transcription() {
         }
       };
 
-      // Store the processing context for cleanup
-      audioContextRef.current = processingAudioContext;
-
-      // Start recording and set up 2-second intervals for more responsive transcription
+      // Start recording and set up intervals
       mediaRecorder.start();
       
       const recordingInterval = setInterval(() => {
@@ -354,9 +487,9 @@ export default function Transcription() {
                 console.warn('Failed to restart recording:', error);
               }
             }
-          }, 50); // Reduced delay for faster restart
+          }, 50);
         }
-      }, 2000); // Reduced interval for more responsive transcription
+      }, 3000); // 3 second chunks for better transcription
 
       // Store for cleanup
       (mediaRecorder as any).recordingInterval = recordingInterval;
@@ -367,9 +500,10 @@ export default function Transcription() {
 
       setFinalText("");
       setLiveText("");
+      setTranscript(undefined);
       setIsRecording(true);
       isRecordingRef.current = true;
-      toast({ title: "Recording Started", description: "Live Whisper transcription enabled." });
+      toast({ title: "Recording Started", description: "Live client-side transcription enabled." });
 
     } catch (err) {
       console.error("getUserMedia error", err);
@@ -469,22 +603,16 @@ Treatment Plan: ${treatmentNotes.treatment_plan}
     }
   };
 
-  // Auto-load Whisper model when component mounts
+  // Initialize worker when component mounts
   useEffect(() => {
-    // Add a small delay to ensure the page is fully loaded
-    const timer = setTimeout(() => {
-      loadWhisperModel();
-    }, 1000);
+    initializeWorker();
     
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     return () => {
       try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch {}
       try { audioContextRef.current?.close(); } catch {}
+      try { workerRef.current?.terminate(); } catch {}
     };
-  }, []);
+  }, [initializeWorker]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -498,14 +626,8 @@ Treatment Plan: ${treatmentNotes.treatment_plan}
             <div className="flex items-center gap-2 mb-2">
               <div className={`w-2 h-2 rounded-full ${isModelLoaded ? 'bg-green-500' : isModelLoading ? 'bg-yellow-500' : 'bg-gray-400'}`}></div>
               <span className="text-sm font-medium">
-                Whisper AI: {isModelLoaded ? 'Ready' : isModelLoading ? 'Loading...' : 'Not Loaded'}
+                Whisper AI: {isModelLoaded ? 'Ready' : isModelLoading ? 'Loading...' : 'Initializing...'}
               </span>
-              {!isModelLoaded && !isModelLoading && (
-                <Button size="sm" variant="outline" onClick={loadWhisperModel}>
-                  <Download className="h-4 w-4 mr-2" />
-                  {whisperPipelineRef.current ? 'Retry Load' : 'Load Model'}
-                </Button>
-              )}
             </div>
             {isModelLoading && (
               <div className="text-xs text-blue-600 flex items-center gap-2">
@@ -515,16 +637,36 @@ Treatment Plan: ${treatmentNotes.treatment_plan}
             )}
             {isModelLoaded && (
               <div className="text-xs text-green-600">
-                High-quality offline transcription ready
+                Client-side transcription ready with Web Worker
               </div>
             )}
             {!isModelLoaded && !isModelLoading && (
-              <div className="text-xs text-amber-600 mt-2">
-                ⚠️ If model loading fails, this might be due to network restrictions. 
-                The model needs to download from HuggingFace (~40MB first time).
+              <div className="text-xs text-blue-600 mt-2">
+                🔄 Initializing Web Worker for client-side transcription...
               </div>
             )}
           </div>
+
+          {/* Progress Items */}
+          {progressItems.length > 0 && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="text-sm font-medium text-blue-800 mb-2">Loading model files...</div>
+              {progressItems.map((item) => (
+                <div key={item.file} className="mb-2">
+                  <div className="flex justify-between text-xs text-blue-600 mb-1">
+                    <span>{item.file}</span>
+                    <span>{Math.round(item.progress * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-1">
+                    <div 
+                      className="bg-blue-600 h-1 rounded-full transition-all duration-300" 
+                      style={{ width: `${item.progress * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="text-center mb-6">
             <Button
