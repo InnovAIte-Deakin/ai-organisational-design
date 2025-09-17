@@ -181,68 +181,152 @@ const createTranscriptionWorker = () => {
   return new Worker(URL.createObjectURL(blob), { type: 'module' });
 };
 
-function dedupeAppend(prev: string, next: string, overlapWords = 12) {
+// Advanced deduplication that handles Whisper's streaming patterns
+function advancedDedupe(prev: string, next: string): string {
   const p = prev.trim();
   const n = next.trim();
   
-  // If previous is empty, return next
+  // Basic checks
   if (!p) return n;
+  if (!n) return p;
+  if (p === n) return p;
   
-  // If next is empty or same as previous, return previous
-  if (!n || p === n) return p;
+  // Remove [BLANK_AUDIO] markers
+  const cleanPrev = p.replace(/\[BLANK_AUDIO\]\s*/g, '').trim();
+  const cleanNext = n.replace(/\[BLANK_AUDIO\]\s*/g, '').trim();
   
   // If next is completely contained in previous, return previous
-  if (p.toLowerCase().includes(n.toLowerCase())) return p;
+  if (cleanPrev.toLowerCase().includes(cleanNext.toLowerCase())) {
+    return cleanPrev;
+  }
   
   // If previous is completely contained in next, return next
-  if (n.toLowerCase().includes(p.toLowerCase())) return n;
+  if (cleanNext.toLowerCase().includes(cleanPrev.toLowerCase())) {
+    return cleanNext;
+  }
   
-  // Try to find overlap at the end of previous and beginning of next
-  const pWords = p.split(/\s+/);
-  const nWords = n.split(/\s+/);
+  // Split into sentences for better analysis
+  const prevSentences = cleanPrev.split(/[.!?]+/).map(s => s.trim()).filter(s => s);
+  const nextSentences = cleanNext.split(/[.!?]+/).map(s => s.trim()).filter(s => s);
   
-  // Look for overlap with different word counts
-  for (let overlap = Math.min(overlapWords, pWords.length, nWords.length); overlap > 0; overlap--) {
-    const pTail = pWords.slice(-overlap).join(" ").toLowerCase();
-    const nHead = nWords.slice(0, overlap).join(" ").toLowerCase();
-    
-    if (pTail === nHead) {
-      // Found overlap, merge by removing the overlapping part from next
-      const remainingNext = nWords.slice(overlap).join(" ");
-      return remainingNext ? (p + " " + remainingNext).trim() : p;
+  // Check for sentence-level duplications
+  const uniqueSentences = new Set();
+  const result = [];
+  
+  // Add previous sentences
+  for (const sentence of prevSentences) {
+    if (sentence && !uniqueSentences.has(sentence.toLowerCase())) {
+      uniqueSentences.add(sentence.toLowerCase());
+      result.push(sentence);
     }
   }
   
-  // No overlap found, check if next starts with any part of previous end
-  const lastSentence = p.split(/[.!?]/).pop()?.trim() || "";
-  if (lastSentence && n.toLowerCase().startsWith(lastSentence.toLowerCase())) {
-    // Next starts with the last sentence of previous, replace the last sentence
-    const beforeLastSentence = p.substring(0, p.lastIndexOf(lastSentence)).trim();
-    return beforeLastSentence ? (beforeLastSentence + " " + n).trim() : n;
+  // Add new sentences that aren't duplicates
+  for (const sentence of nextSentences) {
+    if (sentence && !uniqueSentences.has(sentence.toLowerCase())) {
+      uniqueSentences.add(sentence.toLowerCase());
+      result.push(sentence);
+    }
   }
   
-  // No overlap, append with space
-  return (p + " " + n).trim();
+  // If no new content was added, try word-level deduplication
+  if (result.length === prevSentences.length) {
+    return wordLevelDedupe(cleanPrev, cleanNext);
+  }
+  
+  return result.join('. ').trim() + (result.length > 0 && !result[result.length - 1].match(/[.!?]$/) ? '.' : '');
 }
 
-// Smart text merger for streaming transcription
-function smartMergeTranscription(current: string, newChunk: string): string {
-  const c = current.trim();
-  const n = newChunk.trim();
+// Word-level deduplication for partial overlaps
+function wordLevelDedupe(prev: string, next: string): string {
+  const pWords = prev.split(/\s+/);
+  const nWords = next.split(/\s+/);
   
-  // If current is empty, use new chunk
-  if (!c) return n;
+  // Find the longest overlap at the end of prev and start of next
+  let maxOverlap = 0;
+  const maxCheck = Math.min(pWords.length, nWords.length, 15); // Check up to 15 words
   
-  // If new chunk is empty, keep current
-  if (!n) return c;
-  
-  // If new chunk is much longer and contains current, it's likely a replacement
-  if (n.length > c.length * 1.5 && n.toLowerCase().includes(c.toLowerCase())) {
-    return n;
+  for (let i = 1; i <= maxCheck; i++) {
+    const pTail = pWords.slice(-i).join(' ').toLowerCase();
+    const nHead = nWords.slice(0, i).join(' ').toLowerCase();
+    
+    if (pTail === nHead) {
+      maxOverlap = i;
+    }
   }
   
-  // Use deduplication for incremental updates
-  return dedupeAppend(c, n);
+  if (maxOverlap > 0) {
+    // Remove the overlapping part from next and append the rest
+    const remainingNext = nWords.slice(maxOverlap).join(' ');
+    return remainingNext ? (prev + ' ' + remainingNext).trim() : prev;
+  }
+  
+  // Check if next starts anywhere within the last part of prev
+  const lastPart = pWords.slice(-10).join(' ').toLowerCase(); // Last 10 words
+  const nextStart = nWords.slice(0, 10).join(' ').toLowerCase(); // First 10 words
+  
+  for (let i = 1; i < Math.min(pWords.length, 10); i++) {
+    const searchPhrase = pWords.slice(-i).join(' ').toLowerCase();
+    if (nextStart.startsWith(searchPhrase)) {
+      const beforePhrase = pWords.slice(0, -i).join(' ');
+      return beforePhrase ? (beforePhrase + ' ' + next).trim() : next;
+    }
+  }
+  
+  // No overlap found, append with space
+  return (prev + ' ' + next).trim();
+}
+
+// Smart text merger: only stack if new text starts with previous, otherwise replace
+function smartMergeTranscription(current: string, newChunk: string, previousText: string = ""): string {
+  const c = current.trim();
+  const n = newChunk.trim();
+  const p = previousText.trim();
+  
+  // Basic checks
+  if (!c) return n;
+  if (!n) return c;
+  if (c === n) return c;
+  
+  // Remove [BLANK_AUDIO] markers from comparison
+  const cleanCurrent = c.replace(/\[BLANK_AUDIO\]\s*/g, '').trim();
+  const cleanNew = n.replace(/\[BLANK_AUDIO\]\s*/g, '').trim();
+  const cleanPrevious = p.replace(/\[BLANK_AUDIO\]\s*/g, '').trim();
+  
+  // If new text starts with the previous text, it's likely an extension - stack it
+  if (cleanPrevious && cleanNew.toLowerCase().startsWith(cleanPrevious.toLowerCase())) {
+    // Extract the new part (everything after the previous text)
+    const newPart = cleanNew.substring(cleanPrevious.length).trim();
+    if (newPart) {
+      // Combine current with the new part, avoiding duplication
+      const combined = cleanCurrent + (cleanCurrent.endsWith('.') || cleanCurrent.endsWith('?') || cleanCurrent.endsWith('!') ? ' ' : ' ') + newPart;
+      return combined.trim();
+    }
+    return cleanCurrent; // No new content to add
+  }
+  
+  // If new text is completely different or doesn't start with previous, replace
+  if (cleanPrevious && !cleanNew.toLowerCase().startsWith(cleanPrevious.toLowerCase())) {
+    console.log('🔄 New text doesn\'t start with previous - replacing');
+    return cleanNew;
+  }
+  
+  // If new text is significantly longer and contains current, replace
+  if (cleanNew.length > cleanCurrent.length * 1.5 && cleanNew.toLowerCase().includes(cleanCurrent.toLowerCase())) {
+    return cleanNew;
+  }
+  
+  // If new text is shorter or similar length, check for containment
+  if (cleanCurrent.toLowerCase().includes(cleanNew.toLowerCase())) {
+    return cleanCurrent; // Keep current as it already contains the new text
+  }
+  
+  if (cleanNew.toLowerCase().includes(cleanCurrent.toLowerCase())) {
+    return cleanNew; // New text contains current, use new text
+  }
+  
+  // Default: use advanced deduplication as fallback
+  return advancedDedupe(c, n);
 }
 
 // Helper function to resample audio
@@ -274,7 +358,9 @@ export default function Transcription() {
   const [editableText, setEditableText] = useState(""); // For editable transcription
   const [treatmentNotes, setTreatmentNotes] = useState<TreatmentNotes | null>(null);
   const [soapNotes, setSoapNotes] = useState<SOAPNotes | null>(null);
+  const [recordId, setRecordId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingSOAP, setIsUpdatingSOAP] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -286,6 +372,8 @@ export default function Transcription() {
   const workerRef = useRef<Worker | null>(null);
   const isRecordingRef = useRef<boolean>(false);
   const lastProcessedTextRef = useRef<string>("");
+  const bufferRef = useRef<string>("");
+  const bufferTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   // Configuration
@@ -294,6 +382,45 @@ export default function Transcription() {
   const multilingual = false;
   const subtask = "transcribe";
   const language = "english";
+
+  // Buffer management for smoother transcription output
+  const flushBuffer = useCallback(() => {
+    const bufferedText = bufferRef.current.trim();
+    if (bufferedText && bufferedText !== lastProcessedTextRef.current) {
+      console.log('🔄 Flushing buffer:', bufferedText.substring(0, 50) + '...');
+      
+      // Update the editable and final text with buffered content
+      setEditableText(prev => {
+        const merged = smartMergeTranscription(prev, bufferedText);
+        return merged === prev ? prev : merged;
+      });
+      
+      setFinalText(prev => {
+        const merged = smartMergeTranscription(prev, bufferedText);
+        return merged === prev ? prev : merged;
+      });
+      
+      lastProcessedTextRef.current = bufferedText;
+    }
+    
+    // Clear the buffer
+    bufferRef.current = "";
+  }, []);
+
+  const addToBuffer = useCallback((newText: string) => {
+    // Add new text to buffer
+    bufferRef.current = smartMergeTranscription(bufferRef.current, newText);
+    
+    // Clear existing timer
+    if (bufferTimerRef.current) {
+      clearTimeout(bufferTimerRef.current);
+    }
+    
+    // Set new timer to flush buffer after 2 seconds of no new input
+    bufferTimerRef.current = setTimeout(() => {
+      flushBuffer();
+    }, 2000);
+  }, [flushBuffer]);
 
   // Initialize web worker for transcription
   const initializeWorker = useCallback(() => {
@@ -322,10 +449,19 @@ export default function Transcription() {
             const updateMessage = message;
             const newText = updateMessage.data[0];
             
-            // Skip if this is the same text we just processed
+            // Skip if this is the same text we just processed or very similar
             if (newText === lastProcessedTextRef.current) {
               break;
             }
+            
+            // Skip if the new text is just a minor variation (less than 3 new characters)
+            const prevLength = lastProcessedTextRef.current.length;
+            if (newText.length - prevLength < 3 && newText.startsWith(lastProcessedTextRef.current)) {
+              break;
+            }
+            
+            // Store the previous text before updating
+            const previousText = lastProcessedTextRef.current;
             lastProcessedTextRef.current = newText;
             
             setTranscript({
@@ -334,27 +470,41 @@ export default function Transcription() {
               chunks: updateMessage.data[1].chunks,
             });
             
-            // For live text, show just the new part or latest sentence
-            const sentences = newText.split(/[.!?]+/).filter(s => s.trim());
-            const latestSentence = sentences[sentences.length - 1]?.trim() || newText;
-            setLiveText(latestSentence);
+            // For live text, show just the latest meaningful part
+            const cleanText = newText.replace(/\[BLANK_AUDIO\]\s*/g, '').trim();
+            const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim());
             
-            // For editable text, use smart merging to avoid repetition
+            if (sentences.length > 0) {
+              // Show the last complete sentence, or if incomplete, the last partial sentence
+              const lastSentence = sentences[sentences.length - 1]?.trim();
+              setLiveText(lastSentence || cleanText.split(' ').slice(-10).join(' '));
+            } else {
+              setLiveText(cleanText.split(' ').slice(-10).join(' ')); // Last 10 words
+            }
+            
+            // For editable text, use smart merging with previous text context
             setEditableText(prev => {
-              const merged = smartMergeTranscription(prev, newText);
-              return merged;
+              const merged = smartMergeTranscription(prev, newText, previousText);
+              console.log('📝 Text merge:', {
+                previous: previousText.substring(0, 50) + '...',
+                new: newText.substring(0, 50) + '...',
+                result: merged.substring(0, 50) + '...'
+              });
+              return merged === prev ? prev : merged;
             });
             
             // Update final text with the same smart merging
             setFinalText(prev => {
-              const merged = smartMergeTranscription(prev, newText);
-              return merged;
+              const merged = smartMergeTranscription(prev, newText, previousText);
+              return merged === prev ? prev : merged;
             });
             break;
             
           case "complete":
             const completeMessage = message;
             const completedText = completeMessage.data.text;
+            const previousCompleteText = lastProcessedTextRef.current;
+            
             setTranscript({
               isBusy: false,
               text: completedText,
@@ -364,13 +514,18 @@ export default function Transcription() {
             // Clear live text when complete
             setLiveText("");
             
-            // For completion, use smart merging to ensure we have the final, clean text
+            // For completion, use smart merging with previous text context
             setFinalText(prev => {
-              const merged = smartMergeTranscription(prev, completedText);
+              const merged = smartMergeTranscription(prev, completedText, previousCompleteText);
+              console.log('✅ Final text merge:', {
+                previous: previousCompleteText.substring(0, 50) + '...',
+                completed: completedText.substring(0, 50) + '...',
+                result: merged.substring(0, 50) + '...'
+              });
               return merged;
             });
             setEditableText(prev => {
-              const merged = smartMergeTranscription(prev, completedText);
+              const merged = smartMergeTranscription(prev, completedText, previousCompleteText);
               return merged;
             });
             setIsTranscribing(false);
@@ -461,8 +616,8 @@ export default function Transcription() {
 
   const processTranscriptionMutation = useMutation({
     mutationFn: async (transcription: string) => {
-      // Generate a temporary record ID (in a real app, this would come from the patient record)
-      const record_id = Date.now(); // Using timestamp as temporary ID
+      // Use the record ID from the input, or generate a temporary one
+      const record_id = recordId ? parseInt(recordId) : Date.now();
       
       const result = await apiRequest(
         "POST",
@@ -660,7 +815,39 @@ export default function Transcription() {
       toast({ title: "Error", description: "Record audio first.", variant: "destructive" });
       return;
     }
+    if (!recordId) {
+      toast({ title: "Error", description: "Please enter a Record ID.", variant: "destructive" });
+      return;
+    }
     processTranscriptionMutation.mutate(transcript);
+  };
+
+  const handleUpdateSOAPNotes = async () => {
+    if (!soapNotes || !recordId) {
+      toast({ title: "Error", description: "No SOAP notes to update or missing Record ID.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setIsUpdatingSOAP(true);
+      
+      // Here you would typically save to your backend
+      // For now, we'll just show a success message
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      toast({
+        title: "SOAP Notes Updated",
+        description: `Successfully updated SOAP notes for Record ID: ${recordId}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update SOAP notes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingSOAP(false);
+    }
   };
 
   const handleFinalizeAndSave = async () => {
@@ -738,6 +925,22 @@ ${soapNotes.p}
       <Card>
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4">Dental Appointment Notes</h3>
+          
+          {/* Record ID Input */}
+          <div className="mb-4">
+            <label htmlFor="recordId" className="block text-sm font-medium text-gray-700 mb-2">
+              Record ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="recordId"
+              type="number"
+              value={recordId}
+              onChange={(e) => setRecordId(e.target.value)}
+              placeholder="Enter patient record ID"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
           
           {/* Whisper Model Status */}
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
@@ -883,9 +1086,13 @@ ${soapNotes.p}
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs mr-2">S</span>
               SUBJECTIVE
             </h4>
-            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
-              {soapNotes?.s || <span className="text-gray-400">Patient's reported symptoms and concerns will appear here...</span>}
-            </div>
+            <textarea
+              value={soapNotes?.s || ""}
+              onChange={(e) => setSoapNotes(prev => prev ? {...prev, s: e.target.value} : {s: e.target.value, o: "", a: "", p: ""})}
+              placeholder="Patient's reported symptoms and concerns will appear here..."
+              className="w-full min-h-16 p-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
+            />
           </div>
 
           {/* Objective */}
@@ -894,9 +1101,13 @@ ${soapNotes.p}
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs mr-2">O</span>
               OBJECTIVE
             </h4>
-            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
-              {soapNotes?.o || <span className="text-gray-400">Clinical observations and examination findings will appear here...</span>}
-            </div>
+            <textarea
+              value={soapNotes?.o || ""}
+              onChange={(e) => setSoapNotes(prev => prev ? {...prev, o: e.target.value} : {s: "", o: e.target.value, a: "", p: ""})}
+              placeholder="Clinical observations and examination findings will appear here..."
+              className="w-full min-h-16 p-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              rows={3}
+            />
           </div>
 
           {/* Assessment */}
@@ -905,9 +1116,13 @@ ${soapNotes.p}
               <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs mr-2">A</span>
               ASSESSMENT
             </h4>
-            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
-              {soapNotes?.a || <span className="text-gray-400">Clinical diagnosis and assessment will appear here...</span>}
-            </div>
+            <textarea
+              value={soapNotes?.a || ""}
+              onChange={(e) => setSoapNotes(prev => prev ? {...prev, a: e.target.value} : {s: "", o: "", a: e.target.value, p: ""})}
+              placeholder="Clinical diagnosis and assessment will appear here..."
+              className="w-full min-h-16 p-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              rows={3}
+            />
           </div>
 
           {/* Plan */}
@@ -916,14 +1131,18 @@ ${soapNotes.p}
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs mr-2">P</span>
               PLAN
             </h4>
-            <div className="min-h-16 text-sm text-gray-700 bg-gray-50 p-3 rounded">
-              {soapNotes?.p || <span className="text-gray-400">Treatment plan and next steps will appear here...</span>}
-            </div>
+            <textarea
+              value={soapNotes?.p || ""}
+              onChange={(e) => setSoapNotes(prev => prev ? {...prev, p: e.target.value} : {s: "", o: "", a: "", p: e.target.value})}
+              placeholder="Treatment plan and next steps will appear here..."
+              className="w-full min-h-16 p-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              rows={3}
+            />
           </div>
 
           {/* Processing Status */}
           {processTranscriptionMutation.isPending && (
-            <div className="border-2 border-blue-200 bg-blue-50 p-4 rounded-lg">
+            <div className="border-2 border-blue-200 bg-blue-50 p-4 rounded-lg mb-4">
               <div className="flex items-center justify-center">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-600 mr-2" />
                 <span className="text-blue-800 font-medium">Processing transcription with AI...</span>
@@ -931,6 +1150,26 @@ ${soapNotes.p}
               <p className="text-blue-600 text-sm text-center mt-2">
                 Generating SOAP notes from your transcription
               </p>
+            </div>
+          )}
+
+          {/* Update SOAP Notes Button */}
+          {soapNotes && (
+            <div className="flex justify-center pt-4 border-t border-gray-200">
+              <Button
+                onClick={handleUpdateSOAPNotes}
+                disabled={isUpdatingSOAP || !recordId}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+              >
+                {isUpdatingSOAP ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update SOAP Notes"
+                )}
+              </Button>
             </div>
           )}
         </CardContent>

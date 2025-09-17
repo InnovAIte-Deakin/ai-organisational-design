@@ -94,7 +94,7 @@
             {
               "id": "6b01db05-8bdc-4e62-bfca-ec3364564292",
               "name": "Summaries Version",
-              "value": 1,
+              "value": 2,
               "type": "number"
             }
           ]
@@ -219,7 +219,7 @@
             },
             {
               "fieldId": "text",
-              "fieldValue": "={{ $json.output.summary }}"
+              "fieldValue": "={{ $json.output.toJsonString() }}"
             },
             {
               "fieldId": "version",
@@ -242,6 +242,30 @@
           "name": "Supabase account"
         }
       }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bb7c8649-8e12-4e30-aef4-7f402052afcc",
+              "name": "output",
+              "value": "={{ $('Basic LLM Chain').item.json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1664,
+        64
+      ],
+      "id": "667bacfa-cd88-4919-8c6f-0a7795f4c490",
+      "name": "Edit Fields",
+      "alwaysOutputData": true
     }
   ],
   "pinData": {
@@ -249,7 +273,7 @@
       {
         "json": {
           "record_id": 1,
-          "transcription": "For this appointment we'll check yuor teeth, we'll check how clean they are, check for cavities, and such and we'll see if we need to proceed with anything else like removing them, maybe giving you some toothpaste products to help clean them as well."
+          "transcription": "For this appointment we'll check yuor teeth, we'll check how clean they are, check for cavities, and such and we'll see if we need to proceed with anything else like removing them, maybe giving you some toothpaste products to help clean them as well.."
         }
       }
     ]
@@ -365,13 +389,24 @@
           }
         ]
       ]
+    },
+    "Store Transcription Output": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "5d74e951-8915-46ea-bcb4-01523d0445d7",
+  "versionId": "9efc0e41-cab5-4673-9407-564eb97e0941",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f54075985bfbaffe95d885847570f3c0fe24a84f90486b50e9cf38ee57c98470"

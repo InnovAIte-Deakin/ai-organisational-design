@@ -485,8 +485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Call the transcription workflow via MCP
-      const mcpResponse = await mcpServerClient.callTool("Transcription to SOAP", {
+      // Call the Transcription_to_SOAP tool via MCP
+      const mcpResponse = await mcpServerClient.callTool("Transcription_to_SOAP", {
         record_id: parseInt(record_id),
         transcription: transcription
       });
@@ -497,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let soapNotes = null;
       
       if (mcpResponse && mcpResponse.content && mcpResponse.content.length > 0) {
-        const content = mcpResponse.content[0];
+        const content = mcpResponse.content[0]["text"];
         
         try {
           let responseData;
@@ -508,14 +508,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             responseData = content;
           }
-          
+          console.log(responseData);
+          const mcp_soap = responseData[0].output;
+          console.log(mcp_soap);
+
           // Extract SOAP notes from the structured response
-          if (responseData && responseData.s && responseData.o && responseData.a && responseData.p) {
+          if (mcp_soap && mcp_soap.s && mcp_soap.o && mcp_soap.a && mcp_soap.p) {
             soapNotes = {
-              s: responseData.s, // Subjective
-              o: responseData.o, // Objective
-              a: responseData.a, // Assessment
-              p: responseData.p  // Plan
+              s: mcp_soap.s, // Subjective
+              o: mcp_soap.o, // Objective
+              a: mcp_soap.a, // Assessment
+              p: mcp_soap.p  // Plan
             };
             console.log("✅ Successfully extracted SOAP notes from MCP response");
           } else {
