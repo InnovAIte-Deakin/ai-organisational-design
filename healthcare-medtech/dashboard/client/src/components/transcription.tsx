@@ -619,7 +619,7 @@ export default function Transcription() {
       // Use the record ID from the input, or generate a temporary one
       const record_id = recordId ? parseInt(recordId) : Date.now();
       
-      const result = await apiRequest(
+      const response = await apiRequest(
         "POST",
         "/api/transcription/process",
         { 
@@ -627,16 +627,41 @@ export default function Transcription() {
           transcription: transcription 
         }
       );
+      
+      // Parse the JSON from the response
+      const result = await response.json();
       return result;
     },
     onSuccess: (data: any) => {
-      if (data.success && data.soapNotes) {
-        setSoapNotes(data.soapNotes);
-        toast({ 
-          title: "SOAP Notes Generated", 
-          description: "Transcription processed and SOAP notes generated successfully" 
-        });
+      console.log('🎉 Transcription API Response:', data);
+      console.log('✅ Success:', data.success);
+      console.log('📋 SOAP Notes:', data.soapNotes);
+      console.log('🔍 SOAP Notes type:', typeof data.soapNotes);
+      console.log('📝 SOAP Notes keys:', data.soapNotes ? Object.keys(data.soapNotes) : 'No keys');
+      
+      if (data.success && data.soapNotes && typeof data.soapNotes === 'object') {
+        // Validate that soapNotes has the expected structure
+        const hasValidStructure = data.soapNotes.s || data.soapNotes.o || data.soapNotes.a || data.soapNotes.p;
+        
+        if (hasValidStructure) {
+          setSoapNotes(data.soapNotes);
+          console.log('✅ SOAP Notes set successfully:', data.soapNotes);
+          toast({ 
+            title: "SOAP Notes Generated", 
+            description: "Transcription processed and SOAP notes generated successfully" 
+          });
+        } else {
+          console.warn('⚠️ SOAP Notes object exists but has no valid content');
+          toast({ 
+            title: "Processing Complete", 
+            description: "SOAP notes structure received but appears empty" 
+          });
+        }
       } else {
+        console.warn('⚠️ Missing or invalid SOAP notes in response');
+        console.warn('- data.success:', data.success);
+        console.warn('- data.soapNotes exists:', !!data.soapNotes);
+        console.warn('- data.soapNotes type:', typeof data.soapNotes);
         toast({ 
           title: "Processing Complete", 
           description: "Transcription processed but no SOAP notes generated" 
@@ -918,6 +943,20 @@ ${soapNotes.p}
       try { workerRef.current?.terminate(); } catch {}
     };
   }, [initializeWorker]);
+
+  // Debug SOAP notes changes
+  useEffect(() => {
+    if (soapNotes) {
+      console.log('🔄 SOAP Notes state updated:', soapNotes);
+      console.log('📝 SOAP Notes content:');
+      console.log('  S:', soapNotes.s);
+      console.log('  O:', soapNotes.o);
+      console.log('  A:', soapNotes.a);
+      console.log('  P:', soapNotes.p);
+    } else {
+      console.log('🔄 SOAP Notes state cleared');
+    }
+  }, [soapNotes]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -2,20 +2,24 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { supabaseStorage } from "./supabase-storage";
-import { generateDentalXraySummary, generatePatientSummary, generateTreatmentNotes } from "./services/openai";
+import {
+  generateDentalXraySummary,
+  generatePatientSummary,
+  generateTreatmentNotes,
+} from "./services/openai";
 import { mcpServerClient } from "./services/mcp-client";
-import { 
+import {
   insertPatientSchema,
   insertDentalXraySchema,
   insertAppointmentSchema,
-  insertDentalHistorySchema
+  insertDentalHistorySchema,
 } from "../shared/schema";
 import multer from "multer";
 import { z } from "zod";
 
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -65,58 +69,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Generating AI summary for patient ${patient.id} via MCP...`);
-      
+
       // Check if MCP server is available
       const mcpAvailable = await mcpServerClient.isServerAvailable();
-      console.log(`MCP Server Status: ${mcpAvailable ? '✅ Available' : '❌ Unavailable'}`);
-      
+      console.log(
+        `MCP Server Status: ${mcpAvailable ? "✅ Available" : "❌ Unavailable"}`
+      );
+
       // Use MCP to generate the summary using the Patient_Record_Summary tool
-      const mcpResponse = await mcpServerClient.generatePatientSummary(parseInt(req.params.id));
+      const mcpResponse = await mcpServerClient.generatePatientSummary(
+        parseInt(req.params.id)
+      );
 
       // Extract summary and version from MCP response
       let aiSummary = `AI-generated summary for ${patient.name} created via MCP.`;
       let mcpVersion = 1; // Default version
-      
-      if (mcpResponse && mcpResponse.content && mcpResponse.content.length > 0) {
+
+      if (
+        mcpResponse &&
+        mcpResponse.content &&
+        mcpResponse.content.length > 0
+      ) {
         const content = mcpResponse.content[0];
-        
+
         // Try to parse the response as JSON first (MCP returns structured data)
         try {
           let responseData;
-          if (content.type === 'text' && content.text) {
+          if (content.type === "text" && content.text) {
             responseData = JSON.parse(content.text);
-          } else if (typeof content === 'string') {
+          } else if (typeof content === "string") {
             responseData = JSON.parse(content);
           } else {
             responseData = content;
           }
-          
+
           // Extract the summary and version from the structured response
           if (responseData && responseData.summary) {
             aiSummary = responseData.summary;
             mcpVersion = responseData.version || 1;
             console.log("✅ Extracted summary and version from MCP response");
-          } else if (Array.isArray(responseData) && responseData[0] && responseData[0].summary) {
+          } else if (
+            Array.isArray(responseData) &&
+            responseData[0] &&
+            responseData[0].summary
+          ) {
             aiSummary = responseData[0].summary;
             mcpVersion = responseData[0].version || 1;
-            console.log("✅ Extracted summary and version from MCP array response");
+            console.log(
+              "✅ Extracted summary and version from MCP array response"
+            );
           } else {
-            console.log("⚠️ No 'summary' key found in MCP response, using full content");
+            console.log(
+              "⚠️ No 'summary' key found in MCP response, using full content"
+            );
             aiSummary = content.text || JSON.stringify(responseData);
           }
         } catch (parseError) {
           // Fallback to plain text if JSON parsing fails
-          console.log("⚠️ Could not parse MCP response as JSON, using as plain text");
+          console.log(
+            "⚠️ Could not parse MCP response as JSON, using as plain text"
+          );
           aiSummary = content.text || content.toString();
         }
       }
 
-      console.log("MCP Summary generated:", aiSummary.substring(0, 100) + "...");
+      console.log(
+        "MCP Summary generated:",
+        aiSummary.substring(0, 100) + "..."
+      );
       console.log("Full MCP Response:", JSON.stringify(mcpResponse, null, 2));
 
-      const updatedPatient = await activeStorage.updatePatientAISummary(req.params.id, aiSummary, mcpVersion);
-      console.log("Updated patient with summary:", updatedPatient.aiSummary ? "✅ Summary saved" : "❌ No summary in patient");
-      
+      const updatedPatient = await activeStorage.updatePatientAISummary(
+        req.params.id,
+        aiSummary,
+        mcpVersion
+      );
+      console.log(
+        "Updated patient with summary:",
+        updatedPatient.aiSummary
+          ? "✅ Summary saved"
+          : "❌ No summary in patient"
+      );
+
       res.json({
         ...updatedPatient,
         mcpResponse,
@@ -126,14 +160,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isFallback: mcpResponse._meta?.fallback || false,
         debug: {
           summaryLength: aiSummary.length,
-          summaryPreview: aiSummary.substring(0, 200)
-        }
+          summaryPreview: aiSummary.substring(0, 200),
+        },
       });
     } catch (error) {
       console.error("Failed to generate AI summary via MCP:", error);
-      res.status(500).json({ 
-        message: "Failed to generate AI summary via MCP", 
-        error: error.message 
+      res.status(500).json({
+        message: "Failed to generate AI summary via MCP",
+        error: error.message,
       });
     }
   });
@@ -145,9 +179,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(tools);
     } catch (error) {
       console.error("Failed to list MCP tools:", error);
-      res.status(500).json({ 
-        message: "Failed to list MCP tools", 
-        error: error.message 
+      res.status(500).json({
+        message: "Failed to list MCP tools",
+        error: error.message,
       });
     }
   });
@@ -156,24 +190,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/mcp/call-tool", async (req, res) => {
     try {
       const { toolName, arguments: toolArgs } = req.body;
-      
+
       if (!toolName) {
         return res.status(400).json({ message: "Tool name is required" });
       }
 
-      const mcpResponse = await mcpServerClient.callTool(toolName, toolArgs || {});
-      
+      const mcpResponse = await mcpServerClient.callTool(
+        toolName,
+        toolArgs || {}
+      );
+
       res.json({
         toolName,
         arguments: toolArgs,
         response: mcpResponse,
-        calledAt: new Date().toISOString()
+        calledAt: new Date().toISOString(),
       });
     } catch (error) {
       console.error("Failed to call MCP tool:", error);
-      res.status(500).json({ 
-        message: "Failed to call MCP tool", 
-        error: error.message 
+      res.status(500).json({
+        message: "Failed to call MCP tool",
+        error: error.message,
       });
     }
   });
@@ -182,24 +219,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/test/mcp-summary/:recordId", async (req, res) => {
     try {
       const recordId = parseInt(req.params.recordId);
-      
+
       console.log(`🧪 Test: Generating MCP summary for record ID ${recordId}`);
-      
-      const mcpResponse = await mcpServerClient.generatePatientSummary(recordId);
-      
+
+      const mcpResponse = await mcpServerClient.generatePatientSummary(
+        recordId
+      );
+
       res.json({
         success: true,
         recordId,
         mcpResponse,
         testedAt: new Date().toISOString(),
-        message: "MCP Patient_Record_Summary tool called successfully"
+        message: "MCP Patient_Record_Summary tool called successfully",
       });
     } catch (error) {
       console.error("Test MCP summary failed:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        message: "Failed to test MCP summary", 
-        error: error.message 
+        message: "Failed to test MCP summary",
+        error: error.message,
       });
     }
   });
@@ -207,21 +246,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for MCP server
   app.get("/api/health/mcp", async (req, res) => {
     try {
-      console.log('🏥 Checking MCP server health...');
-      
+      console.log("🏥 Checking MCP server health...");
+
       const isAvailable = await mcpServerClient.isServerAvailable();
-      
+
       if (isAvailable) {
         // Try to list tools to verify full functionality
         const tools = await mcpServerClient.listTools();
-        
+
         res.json({
           status: "healthy",
           mcpServerAvailable: true,
           toolsCount: tools.tools.length,
-          tools: tools.tools.map(t => ({ name: t.name, description: t.description })),
+          tools: tools.tools.map((t) => ({
+            name: t.name,
+            description: t.description,
+          })),
           serverUrl: mcpServerClient.get_url(),
-          checkedAt: new Date().toISOString()
+          checkedAt: new Date().toISOString(),
         });
       } else {
         res.status(503).json({
@@ -233,18 +275,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "1. Check if MCP server is running on port 5678",
             "2. Verify the server URL is correct",
             "3. Check firewall/network settings",
-            "4. Run: node dashboard/test-mcp-connection.js"
+            "4. Run: node dashboard/test-mcp-connection.js",
           ],
-          checkedAt: new Date().toISOString()
+          checkedAt: new Date().toISOString(),
         });
       }
     } catch (error) {
-      console.error('❌ MCP health check failed:', error);
+      console.error("❌ MCP health check failed:", error);
       res.status(503).json({
         status: "error",
         mcpServerAvailable: false,
         error: error.message,
-        checkedAt: new Date().toISOString()
+        checkedAt: new Date().toISOString(),
       });
     }
   });
@@ -253,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/debug/summary/:patientId", async (req, res) => {
     try {
       const patientId = req.params.patientId;
-      
+
       // Check if patient exists
       const patient = await activeStorage.getPatient(patientId);
       if (!patient) {
@@ -262,9 +304,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check Supabase directly for summaries
       const { data: summaries, error } = await supabaseStorage.supabase
-        .from('Summaries')
-        .select('*')
-        .eq('individual_id', parseInt(patientId));
+        .from("Summaries")
+        .select("*")
+        .eq("individual_id", parseInt(patientId));
 
       res.json({
         patientId,
@@ -272,13 +314,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         summariesFound: summaries?.length || 0,
         summaries: summaries || [],
         error: error?.message || null,
-        debuggedAt: new Date().toISOString()
+        debuggedAt: new Date().toISOString(),
       });
     } catch (error) {
       console.error("Debug summary check failed:", error);
-      res.status(500).json({ 
-        message: "Failed to debug summary", 
-        error: error.message 
+      res.status(500).json({
+        message: "Failed to debug summary",
+        error: error.message,
       });
     }
   });
@@ -303,8 +345,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         patientId: req.body.patientId,
         filename: req.file.originalname,
         xrayType: req.body.xrayType || "bitewing",
-        fileUrl: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
-        status: "processing"
+        fileUrl: `data:${req.file.mimetype};base64,${req.file.buffer.toString(
+          "base64"
+        )}`,
+        status: "processing",
       };
 
       const validatedData = insertDentalXraySchema.parse(xrayData);
@@ -312,11 +356,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate AI analysis
       try {
-        const { summary, confidence, findings } = await generateDentalXraySummary(
-          xrayData.xrayType,
-          req.file.buffer.toString('base64')
+        const { summary, confidence, findings } =
+          await generateDentalXraySummary(
+            xrayData.xrayType,
+            req.file.buffer.toString("base64")
+          );
+        await storage.updateDentalXrayAnalysis(
+          xray.id,
+          summary,
+          confidence,
+          findings
         );
-        await storage.updateDentalXrayAnalysis(xray.id, summary, confidence, findings);
       } catch (aiError) {
         console.error("AI analysis failed:", aiError);
       }
@@ -350,7 +400,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/appointments", async (req, res) => {
     try {
       const appointmentData = insertAppointmentSchema.parse(req.body);
-      const appointment = await activeStorage.createAppointment(appointmentData);
+      const appointment = await activeStorage.createAppointment(
+        appointmentData
+      );
       res.json(appointment);
     } catch (error) {
       console.error("Failed to create appointment:", error);
@@ -362,15 +414,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { transcription } = req.body;
       if (!transcription) {
-        return res.status(400).json({ message: "Transcription text is required" });
+        return res
+          .status(400)
+          .json({ message: "Transcription text is required" });
       }
 
-      await activeStorage.updateAppointmentTranscription(req.params.id, transcription);
-      
+      await activeStorage.updateAppointmentTranscription(
+        req.params.id,
+        transcription
+      );
+
       // Generate treatment notes
       const treatmentNotes = await generateTreatmentNotes(transcription);
-      const updatedAppointment = await activeStorage.updateAppointmentTreatmentNotes(req.params.id, treatmentNotes);
-      
+      const updatedAppointment =
+        await activeStorage.updateAppointmentTreatmentNotes(
+          req.params.id,
+          treatmentNotes
+        );
+
       res.json(updatedAppointment);
     } catch (error) {
       console.error("Failed to process transcription:", error);
@@ -381,7 +442,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dental history routes (alias for medical history)
   app.get("/api/patients/:patientId/dental-history", async (req, res) => {
     try {
-      const history = await activeStorage.getDentalHistoryByPatient(req.params.patientId);
+      const history = await activeStorage.getDentalHistoryByPatient(
+        req.params.patientId
+      );
       res.json(history);
     } catch (error) {
       console.error("Failed to fetch dental history:", error);
@@ -392,7 +455,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alias route for medical history (used by client)
   app.get("/api/patients/:patientId/medical-history", async (req, res) => {
     try {
-      const history = await activeStorage.getDentalHistoryByPatient(req.params.patientId);
+      const history = await activeStorage.getDentalHistoryByPatient(
+        req.params.patientId
+      );
       res.json(history);
     } catch (error) {
       console.error("Failed to fetch medical history:", error);
@@ -423,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const todayAppointments = appointments.filter(apt => {
+      const todayAppointments = appointments.filter((apt) => {
         const aptDate = new Date(apt.appointmentDate);
         return aptDate >= today && aptDate < tomorrow;
       });
@@ -431,23 +496,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = {
         activePatients: patients.length,
         todayAppointments: todayAppointments.length,
-        aiAnalyses: xrays.filter(xray => xray.aiAnalysis).length,
+        aiAnalyses: xrays.filter((xray) => xray.aiAnalysis).length,
         recentSummaries: xrays
-          .filter(xray => xray.aiAnalysis)
+          .filter((xray) => xray.aiAnalysis)
           .slice(0, 5)
-          .map(xray => ({
-            patientName: patients.find(p => p.id === xray.patientId)?.name || "Unknown",
+          .map((xray) => ({
+            patientName:
+              patients.find((p) => p.id === xray.patientId)?.name || "Unknown",
             summary: xray.aiAnalysis?.substring(0, 100) + "...",
-            timestamp: xray.uploadedAt
+            timestamp: xray.uploadedAt,
           })),
         upcomingAppointments: appointments
-          .filter(apt => new Date(apt.appointmentDate) > new Date())
+          .filter((apt) => new Date(apt.appointmentDate) > new Date())
           .slice(0, 5)
-          .map(apt => ({
-            patientName: patients.find(p => p.id === apt.patientId)?.name || "Unknown",
+          .map((apt) => ({
+            patientName:
+              patients.find((p) => p.id === apt.patientId)?.name || "Unknown",
             type: apt.type,
-            time: apt.appointmentDate
-          }))
+            time: apt.appointmentDate,
+          })),
       };
 
       res.json(stats);
@@ -459,14 +526,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Process transcription with AI (SOAP notes generation)
   app.post("/api/transcription/process", async (req, res) => {
     try {
-      console.log('🎤 Processing transcription with AI...');
-      
+      console.log("🎤 Processing transcription with AI...");
+
       const { record_id, transcription } = req.body;
-      
+
       if (!transcription || !record_id) {
         return res.status(400).json({
           success: false,
-          error: "Missing required fields: record_id and transcription"
+          error: "Missing required fields: record_id and transcription",
         });
       }
 
@@ -475,64 +542,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check MCP server availability
       const mcpAvailable = await mcpServerClient.isServerAvailable();
-      console.log(`MCP Server Status: ${mcpAvailable ? '✅ Available' : '❌ Unavailable'}`);
-      
+      console.log(
+        `MCP Server Status: ${mcpAvailable ? "✅ Available" : "❌ Unavailable"}`
+      );
+
       if (!mcpAvailable) {
         return res.status(503).json({
           success: false,
-          error: "MCP server is not available. Please ensure the MCP server is running.",
-          fallback: true
+          error:
+            "MCP server is not available. Please ensure the MCP server is running.",
+          fallback: true,
         });
       }
 
       // Call the Transcription_to_SOAP tool via MCP
-      const mcpResponse = await mcpServerClient.callTool("Transcription_to_SOAP", {
-        record_id: parseInt(record_id),
-        transcription: transcription
-      });
+      const mcpResponse = await mcpServerClient.callTool(
+        "Transcription_to_SOAP",
+        {
+          record_id: parseInt(record_id),
+          transcription: transcription,
+        }
+      );
 
       console.log("MCP Response received:", mcpResponse);
 
       // Parse the response to extract SOAP notes
       let soapNotes = null;
-      
-      if (mcpResponse && mcpResponse.content && mcpResponse.content.length > 0) {
+
+      if (
+        mcpResponse &&
+        mcpResponse.content &&
+        mcpResponse.content.length > 0
+      ) {
         const content = mcpResponse.content[0]["text"];
-        
+
         try {
           let responseData;
-          if (content.type === 'text' && content.text) {
+          if (content.type === "text" && content.text) {
             responseData = JSON.parse(content.text);
-          } else if (typeof content === 'string') {
+          } else if (typeof content === "string") {
             responseData = JSON.parse(content);
           } else {
             responseData = content;
           }
-          console.log(responseData);
           const mcp_soap = responseData[0].output;
           console.log(mcp_soap);
 
           // Extract SOAP notes from the structured response
-          if (mcp_soap && mcp_soap.s && mcp_soap.o && mcp_soap.a && mcp_soap.p) {
+          if (
+            mcp_soap &&
+            mcp_soap.s &&
+            mcp_soap.o &&
+            mcp_soap.a &&
+            mcp_soap.p
+          ) {
             soapNotes = {
               s: mcp_soap.s, // Subjective
               o: mcp_soap.o, // Objective
               a: mcp_soap.a, // Assessment
-              p: mcp_soap.p  // Plan
+              p: mcp_soap.p, // Plan
             };
-            console.log("✅ Successfully extracted SOAP notes from MCP response");
+            console.log(
+              "✅ Successfully extracted SOAP notes from MCP response"
+            );
           } else {
-            console.warn("⚠️ MCP response doesn't contain expected SOAP structure");
+            console.warn(
+              "⚠️ MCP response doesn't contain expected SOAP structure"
+            );
           }
         } catch (parseError) {
           console.error("❌ Failed to parse MCP response as JSON:", parseError);
           // Try to extract text content as fallback
-          if (content.type === 'text' && content.text) {
+          if (content.type === "text" && content.text) {
             soapNotes = {
               s: "Unable to parse structured response",
               o: "Raw response: " + content.text.substring(0, 200) + "...",
               a: "Parsing error occurred",
-              p: "Please review the raw transcription"
+              p: "Please review the raw transcription",
             };
           }
         }
@@ -542,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({
           success: false,
           error: "Failed to generate SOAP notes from transcription",
-          rawResponse: mcpResponse
+          rawResponse: mcpResponse,
         });
       }
 
@@ -551,15 +637,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         soapNotes: soapNotes,
         recordId: record_id,
         processedAt: new Date().toISOString(),
-        transcriptionLength: transcription.length
+        transcriptionLength: transcription.length,
       });
-
     } catch (error: any) {
-      console.error('❌ Error processing transcription:', error);
+      console.error("❌ Error processing transcription:", error);
       res.status(500).json({
         success: false,
         error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   });
