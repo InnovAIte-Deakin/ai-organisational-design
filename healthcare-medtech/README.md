@@ -19,6 +19,6 @@ The dot point list below introduces individual files and folders and their purpo
 
 7. [Software Requirement Specification Document.pdf](/healthcare-medtech/docs/SRS%20Patient%20Record%20Summarisation.pdf): This is the Software Requirement Specification document which describes the purpose of the software, the description of the software, the requirements and needs of the software, and the links between user stories. Contains both workflows from above.
 
-8. SOON TO COME: Installation Video
-9. SOON TO COME: Demonstration Videos - transcription and record summary
-10. SOON TO COME: Survey responses
+8. MedTech Dashboard "User Story" Demonstration: https://deakin365-my.sharepoint.com/:v:/g/personal/dheenan_deakin_edu_au/Ec9KHauWtDJCm1Xsdq4nQmQB3fLNyxO_1njnqYofEacKng?e=lTakD8
+
+9. MedTech Full Workflow and Dashboard Installation Guide: https://deakin365-my.sharepoint.com/:v:/g/personal/dheenan_deakin_edu_au/EbmlYx0h4gFPks35vdX7XqsB2-2QMVheXa1OCg8KbTJ-1A?e=gCb889
