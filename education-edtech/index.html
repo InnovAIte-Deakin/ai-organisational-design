@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Progress Tracker - Teacher Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container">
+            <h1 class="header-title">
+                <span class="header-icon">📊</span>
+                AI Progress Tracker
+            </h1>
+            <p class="header-subtitle">Empowering teachers with intelligent student progress insights</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" id="individualTab" data-tab="individual">
+                    <span class="tab-icon">👤</span>
+                    Individual Analysis
+                </button>
+                <button class="tab-btn" id="bulkTab" data-tab="bulk">
+                    <span class="tab-icon">👥</span>
+                    Bulk Upload
+                </button>
+                <button class="tab-btn" id="rubricTab" data-tab="rubric">
+                    <span class="tab-icon">📋</span>
+                    Rubric Management
+                </button>
+            </div>
+
+            <!-- Individual Upload Section -->
+            <section class="upload-section tab-content active" id="individualSection">
+                <div class="section-header">
+                    <h2>Upload Student Work</h2>
+                    <p>Upload student assignments, essays, or projects for AI analysis</p>
+                </div>
+                
+                <form class="upload-form" id="uploadForm">
+                    <div class="form-group">
+                        <label for="studentName" class="form-label">Student Name</label>
+                        <input 
+                            type="text" 
+                            id="studentName" 
+                            name="studentName" 
+                            class="form-input" 
+                            placeholder="Enter student's full name"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignmentType" class="form-label">Assignment Type</label>
+                        <select id="assignmentType" name="assignmentType" class="form-select" required>
+                            <option value="">Select assignment type</option>
+                            <option value="essay">Essay</option>
+                            <option value="project">Project</option>
+                            <option value="homework">Homework</option>
+                            <option value="quiz">Quiz</option>
+                            <option value="presentation">Presentation</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rubricSelectIndividual" class="form-label">Assessment Rubric</label>
+                        <select id="rubricSelectIndividual" name="rubricSelectIndividual" class="form-select">
+                            <option value="default">Use Default AI Analysis</option>
+                        </select>
+                        <small class="form-hint">💡 Create custom rubrics in the Rubric Management tab</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="studentWork" class="form-label">Student Work</label>
+                        <div class="upload-area">
+                            <textarea 
+                                id="studentWork" 
+                                name="studentWork" 
+                                class="form-textarea" 
+                                placeholder="Paste student work here or describe the assignment..."
+                                rows="8"
+                            ></textarea>
+                            <div class="upload-hint">
+                                <span class="upload-icon">📝</span>
+                                <p>You can also upload files by dragging and dropping them here</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Upload Photo of Student Work</label>
+                        <div class="photo-upload-area" id="photoUploadArea">
+                            <input type="file" id="photoUpload" name="photoUpload" accept="image/*" style="display: none;">
+                            <div class="photo-upload-content" id="photoUploadContent">
+                                <div class="photo-upload-icon">📷</div>
+                                <p class="photo-upload-text">Click to upload a photo of student work</p>
+                                <p class="photo-upload-subtext">or drag and drop an image here</p>
+                                <button type="button" class="photo-upload-btn" id="photoUploadBtn">
+                                    Choose Photo
+                                </button>
+                            </div>
+                            <div class="photo-preview" id="photoPreview" style="display: none;">
+                                <img id="previewImage" src="" alt="Student work preview">
+                                <div class="photo-actions">
+                                    <button type="button" class="remove-photo-btn" id="removePhotoBtn">Remove</button>
+                                    <button type="button" class="change-photo-btn" id="changePhotoBtn">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="photo-info">
+                            <small>💡 Upload a clear photo of handwritten work, essays, or projects for AI analysis</small>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn" id="analyzeBtn">
+                        <span class="btn-icon">🔍</span>
+                        Analyze Work
+                    </button>
+                </form>
+            </section>
+
+            <!-- Bulk Upload Section -->
+            <section class="upload-section tab-content" id="bulkSection">
+                <div class="section-header">
+                    <h2>Bulk Student Upload</h2>
+                    <p>Upload multiple students' work and feedback to Compass all at once</p>
+                </div>
+                
+                <div class="bulk-upload-container">
+                    <div class="bulk-controls">
+                        <button type="button" class="add-student-btn" id="addStudentBtn">
+                            <span class="btn-icon">➕</span>
+                            Add Student
+                        </button>
+                        <div class="bulk-actions">
+                            <button type="button" class="bulk-analyze-btn" id="bulkAnalyzeBtn">
+                                <span class="btn-icon">🔍</span>
+                                Analyze All Students
+                            </button>
+                            <button type="button" class="bulk-compass-btn" id="bulkCompassBtn" disabled>
+                                <span class="btn-icon">📤</span>
+                                Upload All to Compass
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="students-container" id="studentsContainer">
+                        <!-- Student entries will be added here dynamically -->
+                    </div>
+                    
+                    <div class="bulk-status" id="bulkStatus" style="display: none;">
+                        <div class="status-content">
+                            <span class="status-icon">⏳</span>
+                            <span class="status-text">Processing students...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Rubric Management Section -->
+            <section class="upload-section tab-content" id="rubricSection">
+                <div class="section-header">
+                    <h2>Rubric Management</h2>
+                    <p>Create, customize, and manage assessment rubrics for consistent grading</p>
+                </div>
+                
+                <div class="rubric-container">
+                    <div class="rubric-controls">
+                        <div class="rubric-actions">
+                            <button type="button" class="create-rubric-btn" id="createRubricBtn">
+                                <span class="btn-icon">➕</span>
+                                Create New Rubric
+                            </button>
+                            <button type="button" class="load-template-btn" id="loadTemplateBtn">
+                                <span class="btn-icon">📄</span>
+                                Load Template
+                            </button>
+                        </div>
+                        <div class="rubric-selector">
+                            <label for="rubricSelect" class="form-label">Select Rubric:</label>
+                            <select id="rubricSelect" class="form-select">
+                                <option value="">Choose a rubric to use</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="rubric-editor" id="rubricEditor" style="display: none;">
+                        <div class="rubric-header">
+                            <div class="form-group">
+                                <label for="rubricName" class="form-label">Rubric Name</label>
+                                <input type="text" id="rubricName" class="form-input" placeholder="e.g., Essay Writing Rubric">
+                            </div>
+                            <div class="form-group">
+                                <label for="rubricDescription" class="form-label">Description</label>
+                                <textarea id="rubricDescription" class="form-textarea" rows="2" placeholder="Brief description of this rubric"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="rubric-criteria" id="rubricCriteria">
+                            <!-- Criteria will be added dynamically -->
+                        </div>
+                        
+                        <div class="rubric-actions-bottom">
+                            <button type="button" class="add-criteria-btn" id="addCriteriaBtn">
+                                <span class="btn-icon">➕</span>
+                                Add Criteria
+                            </button>
+                            <div class="rubric-save-actions">
+                                <button type="button" class="save-rubric-btn" id="saveRubricBtn">
+                                    <span class="btn-icon">💾</span>
+                                    Save Rubric
+                                </button>
+                                <button type="button" class="test-rubric-btn" id="testRubricBtn">
+                                    <span class="btn-icon">🧪</span>
+                                    Test with Sample
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="rubric-preview" id="rubricPreview" style="display: none;">
+                        <h3>Rubric Preview</h3>
+                        <div class="preview-content" id="previewContent">
+                            <!-- Preview will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Progress Report Section -->
+            <section class="report-section" id="reportSection">
+                <div class="section-header">
+                    <h2>Progress Report</h2>
+                    <p>AI-generated insights and recommendations</p>
+                </div>
+                
+                <div class="report-placeholder" id="reportPlaceholder">
+                    <div class="placeholder-content">
+                        <div class="placeholder-icon">📋</div>
+                        <h3>Report will appear here after analysis</h3>
+                        <p>Upload student work and click "Analyze Work" to generate a detailed progress report with strengths, areas for improvement, and personalized recommendations.</p>
+                    </div>
+                </div>
+                
+                <!-- Sample Report (hidden by default) -->
+                <div class="progress-report" id="progressReport" style="display: none;">
+                    <div class="report-header">
+                        <h3 class="student-name" id="reportStudentName">Student Name</h3>
+                        <div class="report-meta">
+                            <span class="assignment-type" id="reportAssignmentType">Assignment Type</span>
+                            <span class="analysis-date" id="analysisDate">Analysis Date</span>
+                        </div>
+                    </div>
+                    
+                    <div class="report-content">
+                        <div class="report-card grade-card">
+                            <div class="card-header">
+                                <h4>📈 Overall Grade</h4>
+                            </div>
+                            <div class="grade-display">
+                                <span class="grade-letter" id="overallGrade">B+</span>
+                                <span class="grade-percentage">85%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="report-card strengths-card">
+                            <div class="card-header">
+                                <h4>💪 Strengths</h4>
+                            </div>
+                            <ul class="strengths-list" id="strengthsList">
+                                <li>Clear and well-structured arguments</li>
+                                <li>Strong vocabulary and writing style</li>
+                                <li>Good use of supporting evidence</li>
+                                <li>Creative problem-solving approach</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="report-card weaknesses-card">
+                            <div class="card-header">
+                                <h4>🎯 Areas for Improvement</h4>
+                            </div>
+                            <ul class="weaknesses-list" id="weaknessesList">
+                                <li>Grammar and punctuation errors</li>
+                                <li>Could benefit from more detailed examples</li>
+                                <li>Conclusion needs strengthening</li>
+                                <li>Time management in longer assignments</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="report-card recommendations-card">
+                            <div class="card-header">
+                                <h4>💡 Recommendations</h4>
+                            </div>
+                            <div class="recommendations-content" id="recommendationsContent">
+                                <p><strong>Immediate Actions:</strong></p>
+                                <ul>
+                                    <li>Review grammar rules and practice punctuation</li>
+                                    <li>Work on developing stronger conclusions</li>
+                                </ul>
+                                <p><strong>Long-term Goals:</strong></p>
+                                <ul>
+                                    <li>Practice time management techniques</li>
+                                    <li>Expand vocabulary through reading</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="report-card compass-upload-card">
+                            <div class="card-header">
+                                <h4>📤 Upload to Compass</h4>
+                            </div>
+                            <div class="compass-upload-content">
+                                <p>Upload this progress report and student work directly to your Compass system.</p>
+                                <div class="compass-actions">
+                                    <button type="button" class="compass-upload-btn" id="compassUploadBtn">
+                                        <span class="btn-icon">📤</span>
+                                        Upload to Compass
+                                    </button>
+                                    <div class="compass-status" id="compassStatus" style="display: none;">
+                                        <span class="status-icon">⏳</span>
+                                        <span class="status-text">Uploading to Compass...</span>
+                                    </div>
+                                </div>
+                                <div class="compass-info">
+                                    <small>💡 This will upload the complete progress report including grades, feedback, and recommendations to your Compass gradebook.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 AI Progress Tracker. Empowering educators with intelligent insights.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
