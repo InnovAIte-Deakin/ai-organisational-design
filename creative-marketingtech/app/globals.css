@@ -1,0 +1,416 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Cadence Design System - CSS Variables */
+:root {
+  /* Light Mode Colors */
+  --background: #F9F9F9;
+  --background-secondary: #FFFFFF;
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --text-placeholder: #888888;
+  --border-subtle: #EAEAEA;
+  --border-interactive: #AAAAAA;
+  
+  /* Default Accent Colors (Digital Mint) */
+  --accent-primary: #79F2C3;
+  --accent-text: #0A2B1D;
+  
+  /* Campaign Mode Accent Colors (Digital Mauve) */
+  --accent-primary-mauve: #E6A6DE;
+  --accent-text-mauve: #361A32;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Mode Colors */
+    --background: #121212;
+    --background-secondary: #1E1E1E;
+    --text-primary: #F9F9F9;
+    --text-secondary: #BBBBBB;
+    --text-placeholder: #666666;
+    --border-subtle: #2D2D2D;
+    --border-interactive: #555555;
+    
+    /* Default Accent Colors (Digital Mint) - same in dark mode */
+    --accent-primary: #79F2C3;
+    --accent-text: #0A2B1D;
+    
+    /* Campaign Mode Accent Colors (Digital Mauve) - same in dark mode */
+    --accent-primary-mauve: #E6A6DE;
+    --accent-text-mauve: #361A32;
+  }
+}
+
+/* Dynamic Accent Color Classes with Smooth Transitions */
+.single-mode {
+  --accent-primary: #79F2C3;
+  --accent-text: #0A2B1D;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.campaign-mode {
+  --accent-primary: #E6A6DE;
+  --accent-text: #361A32;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth transitions for all accent color dependent elements */
+* {
+  transition: 
+    background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Brutalist Gradient Header Effect with Smooth Animation */
+.header-gradient {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse 120% 100% at center top,
+    var(--accent-primary) 0%,
+    transparent 70%
+  );
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 1;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-gradient::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    var(--accent-primary) 20%,
+    transparent 40%
+  );
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 1;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Sliding Toggle Switch Animation */
+.mode-switch-container {
+  position: relative;
+  display: flex;
+  background-color: var(--border-subtle);
+  border-radius: 1rem;
+  padding: 0.5rem;
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-toggle-slider {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  height: calc(100% - 1rem);
+  background-color: var(--accent-primary);
+  border-radius: 0.75rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.mode-toggle-slider.single {
+  transform: translateX(0);
+  width: calc(50% - 0.25rem);
+}
+
+.mode-toggle-slider.campaign {
+  transform: translateX(calc(100% + 0.5rem));
+  width: calc(50% - 0.25rem);
+}
+
+.mode-button {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  font-family: 'Geist Mono', monospace;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.mode-button:hover {
+  color: var(--text-primary);
+}
+
+.mode-button.active {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.mode-button:not(.active) {
+  color: var(--text-secondary);
+}
+
+/* Balanced Content Animation */
+.content-section {
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.content-section.slide-out-left {
+  opacity: 0.8;
+  transform: translateX(-8%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-section.slide-out-right {
+  opacity: 0.8;
+  transform: translateX(8%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-section.slide-in-left {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.content-section.slide-in-right {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+
+/* Mode switch container with overflow hidden for sliding effect */
+.mode-switch-container {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Content wrapper for sliding */
+.content-wrapper {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(0);
+}
+
+.content-wrapper.sliding {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Typography */
+body {
+  font-family: 'Geist Mono', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--background);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Display & Headings - Geist Sans Bold/Black */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* UI Elements - Geist Mono */
+button, input, textarea, select, label {
+  font-family: 'Geist Mono', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Button Styles */
+.btn-primary {
+  background-color: var(--accent-primary);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 16px;
+  padding: 16px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-interactive);
+  border-radius: 16px;
+  padding: 16px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(121, 242, 195, 0.3);
+}
+
+.btn-secondary {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 16px 24px;
+  font-weight: 500;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-interactive);
+  transform: translateY(-1px);
+}
+
+/* Input Styles */
+.input-field {
+  background-color: var(--background);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 16px 20px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(121, 242, 195, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--text-placeholder);
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--border-interactive);
+}
+
+.card-selected {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px var(--accent-primary);
+}
+
+/* Status Indicators */
+.status-completed {
+  background-color: var(--accent-primary);
+  color: var(--accent-text);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.status-generating {
+  background-color: var(--background-secondary);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid var(--border-subtle);
+}
+
+.status-failed {
+  background-color: #ff6b6b;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Focus States */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(121, 242, 195, 0.2);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card {
+    padding: 20px;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+  
+  .input-field {
+    padding: 14px 18px;
+    font-size: 15px;
+  }
+}
