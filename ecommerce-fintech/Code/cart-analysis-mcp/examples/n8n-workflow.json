@@ -1,0 +1,119 @@
+{
+  "name": "Cart Analysis with MCP",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "url": "http://localhost:3000/mcp/tools",
+        "options": {}
+      },
+      "name": "List MCP Tools",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "http://localhost:3000/mcp/execute",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"toolId\": \"analyze_cart\",\n  \"parameters\": {\n    \"cart\": {{$json[\"cart\"]}}\n  }\n}"
+      },
+      "name": "Analyze Cart",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "cart",
+              "value": "[\n  {\n    \"name\": \"Laptop\",\n    \"price\": 999.99,\n    \"quantity\": 1,\n    \"category\": \"electronics\"\n  },\n  {\n    \"name\": \"Wireless Mouse\",\n    \"price\": 49.99,\n    \"quantity\": 1,\n    \"category\": \"accessories\"\n  },\n  {\n    \"name\": \"Headphones\",\n    \"price\": 129.99,\n    \"quantity\": 1,\n    \"category\": \"electronics\"\n  }\n]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Sample Cart Data",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process the cart analysis results to create a friendly message\nconst result = $input.item.json.result;\n\nconst summary = result.summary;\nconst categoryBreakdown = result.categoryBreakdown;\nconst deals = result.deals;\nconst recommendations = result.recommendations;\n\nlet message = `## Cart Analysis Results\\n\\n`;\n\nmessage += `### Summary\\n`;\nmessage += `- Total Items: ${summary.totalItems}\\n`;\nmessage += `- Total Cost: $${summary.totalCost}\\n`;\n\nif (parseFloat(summary.totalSavings) > 0) {\n  message += `- Total Savings: $${summary.totalSavings}\\n`;\n  message += `- Final Cost: $${summary.finalCost}\\n`;\n}\n\nmessage += `\\n### Items by Category\\n`;\ncategoryBreakdown.forEach(cat => {\n  message += `- ${cat.category}: ${cat.items} items ($${cat.total})\\n`;\n});\n\nif (deals.applicable.length > 0) {\n  message += `\\n### Applicable Deals\\n`;\n  deals.applicable.forEach(deal => {\n    message += `- ${deal.description} (Save $${deal.savings})\\n`;\n  });\n}\n\nif (deals.potential.length > 0) {\n  message += `\\n### Potential Deals\\n`;\n  deals.potential.forEach(deal => {\n    message += `- ${deal.description} (${deal.missing})\\n`;\n  });\n}\n\nif (recommendations.length > 0) {\n  message += `\\n### Recommendations\\n`;\n  recommendations.forEach(rec => {\n    message += `- ${rec.category}: ${rec.reason}\\n`;\n  });\n}\n\nreturn {\n  messageFormatted: message,\n  analysisResult: result\n};"
+      },
+      "name": "Format Results",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json[\"messageFormatted\"]}}",
+        "options": {}
+      },
+      "name": "Response to Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1060,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Sample Cart Data": {
+      "main": [
+        [
+          {
+            "node": "Analyze Cart",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List MCP Tools",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Cart": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Response to Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "cart-analysis-workflow"
+}
