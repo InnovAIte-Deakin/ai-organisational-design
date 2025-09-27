@@ -1,0 +1,321 @@
+.layoutContainer {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 100vh;
+  background-color: #001a36;
+  color: #eaeaea;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.sidebar {
+  position: relative;
+  border-right: 1px solid #0a335c;
+  padding: 1rem;
+  overflow: hidden;
+  background-color: rgba(2, 31, 61, 0.7);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarCollapsed {
+  width: 60px;
+  padding: 1rem 0.5rem;
+}
+
+.sidebarCollapsed .sidebarContent > *:not(.navList) {
+  display: none;
+}
+
+.sidebarCollapsed .navItem {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.sidebarCollapsed .navItemText {
+  display: none;
+}
+
+.sidebarContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.layoutContainer:has(.sidebarCollapsed) {
+  grid-template-columns: 60px 1fr;
+}
+
+.sidebarToggle {
+  position: absolute;
+  top: 1rem;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background-color: #0a335c;
+  color: #00ffff;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.sidebarToggle:hover {
+  background-color: #0a4070;
+  transform: scale(1.1);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  background-color: #001429;
+  overflow: hidden; /* Ensure no double scrollbars appear */
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #0a335c;
+  background-color: rgba(2, 31, 61, 0.7);
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #00ffff;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* Added for absolute positioning of child elements if needed */
+  height: 100%;
+  padding: 0;
+}
+
+.sessionList {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sessionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #0a335c;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: background-color 0.2s;
+}
+
+.sessionItem:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sessionActive {
+  border-color: #00ffff;
+  background-color: rgba(0, 255, 255, 0.05);
+}
+
+.sessionBtn {
+  background-color: transparent;
+  color: inherit;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deleteBtn {
+  background-color: transparent;
+  border: none;
+  color: #aaaaaa;
+  cursor: pointer;
+  font-size: 1.125rem;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.deleteBtn:hover {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff6b6b;
+}
+
+.editBtn {
+  background-color: transparent;
+  border: none;
+  color: #aaaaaa;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  margin-right: 0.25rem;
+}
+
+.editBtn:hover {
+  background-color: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+}
+
+.sessionControls {
+  display: flex;
+  align-items: center;
+}
+
+.sessionEditInput {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid #00ffff;
+  border-radius: 0.25rem;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  width: 100%;
+  outline: none;
+}
+
+/* Neural background effect */
+.neuralBackground {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.neuralGlow1 {
+  position: absolute;
+  top: -5rem;
+  left: -5rem;
+  width: 30rem;
+  height: 30rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(0, 255, 255, 0.15) 0%,
+    rgba(0, 31, 63, 0) 70%
+  );
+  opacity: 0.25;
+  filter: blur(3rem);
+}
+
+.neuralGlow2 {
+  position: absolute;
+  bottom: -8rem;
+  right: -8rem;
+  width: 40rem;
+  height: 40rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(0, 255, 255, 0.1) 0%,
+    rgba(0, 31, 63, 0) 70%
+  );
+  opacity: 0.2;
+  filter: blur(4rem);
+}
+
+/* Navigation styles */
+.navSection {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(10, 51, 92, 0.6);
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.navSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.5);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: transparent;
+  border: none;
+  color: rgba(224, 242, 254, 0.7);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-align: left;
+}
+
+.navItem:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.navItemActive {
+  background-color: rgba(0, 255, 255, 0.05);
+  color: #00ffff;
+}
+
+.navItemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+}
+
+.sidebarCollapsed .navItemIcon {
+  margin-right: 0;
+}
+
+/* Specific styling for dashboard content */
+.dashboardContent {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem;
+  padding-bottom: 3rem;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+/* Styling scrollbar for Webkit browsers */
+.dashboardContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboardContent::-webkit-scrollbar-track {
+  background: #001a36;
+}
+
+.dashboardContent::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 255, 255, 0.3);
+  border-radius: 20px;
+  border: 2px solid #001a36;
+}
+
+.dashboardContent::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 255, 255, 0.5);
+}
