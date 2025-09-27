@@ -1,0 +1,219 @@
+{
+  "name": "AI co-founder store",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "859d5307-24b5-4757-b891-ba8ec4405b85",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        -496
+      ],
+      "id": "5b55d204-a1fc-449f-860d-679bb907983b",
+      "name": "Webhook",
+      "webhookId": "859d5307-24b5-4757-b891-ba8ec4405b85",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        720,
+        -496
+      ],
+      "id": "55f96198-9681-4ac0-a093-5191e69a1841",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b3d7928-4cb9-4087-a3ad-322df92d296b",
+              "name": "reply",
+              "value": "={{$json.response || $json.text || $json.output || 'No responses from AI Agent'}}",
+              "type": "string"
+            },
+            {
+              "id": "aff40eb9-0545-40ce-aa67-965662cc6708",
+              "name": "sessionId",
+              "value": "{{$json.body.sessionId}}",
+              "type": "string"
+            },
+            {
+              "id": "355f5a04-3348-42fc-bd59-3413d7fb4fdc",
+              "name": "done",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        -496
+      ],
+      "id": "73a8de8b-38a0-4617-b395-c47eac34fef0",
+      "name": "Edit Fields",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.body.text}}\n",
+        "options": {
+          "systemMessage": "You are a friendly shop assistant.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        -496
+      ],
+      "id": "f865e07a-f0a2-4f84-98eb-9ebc5c23cccb",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -272
+      ],
+      "id": "4f8d8cda-8202-4a5c-ab5c-76f06d529d68",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "ga0mMQ3Ey8hIdf3f",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://192.168.4.32:3000/mcp/tools",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        -272
+      ],
+      "id": "409879f1-9bb5-4981-b9b1-b90f4be9c2b6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{$json.body.sessionId || $json.headers['x-session-id'] || 'default'}}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        -272
+      ],
+      "id": "9a1144b9-424d-4923-9872-78a7252434b8",
+      "name": "Simple Memory1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6d35127b-3011-498c-8e75-5a6af19ead00",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b8ce065c2dd1740c70391ce0c1e86897e362b0b851609d1cb9fdd52282b88cc9"
+  },
+  "id": "UavUPFCiDtKRj6eO",
+  "tags": []
+}
