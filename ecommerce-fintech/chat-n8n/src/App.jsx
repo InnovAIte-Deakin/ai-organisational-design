@@ -18,14 +18,16 @@ export default function App() {
   const [sending, setSending] = useState(false);
   const [currentView, setCurrentView] = useLocalStorage("currentView", "dashboard"); // 'dashboard' or 'chat'
 
-  // Initialize app with a first session if none exists
+  // Initialize app with a first session if none exists (demo data is loaded in main.jsx)
   useEffect(() => {
+    // If there are no sessions at all, create a new one
     if (!sessions.length) {
       const first = { id: newId(), title: "New chat" };
       setSessions([first]);
       setCurrentId(first.id);
       setMessagesStore({ [first.id]: [] });
-    } else if (!currentId) {
+    } else if (!currentId && sessions.length > 0) {
+      // If there are sessions but no currentId, set it to the first session
       setCurrentId(sessions[0].id);
     }
   }, [sessions, currentId, setSessions, setCurrentId, setMessagesStore]);
