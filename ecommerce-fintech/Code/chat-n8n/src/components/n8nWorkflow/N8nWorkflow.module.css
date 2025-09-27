@@ -1,0 +1,150 @@
+/* N8nWorkflow.module.css */
+
+.n8nWorkflowContainer {
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.n8nWorkflowHeader {
+  background-color: rgba(2, 31, 61, 0.7);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.n8nWorkflowTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.n8nWorkflowSubtitle {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.openN8nButton {
+  margin-top: 1rem;
+}
+
+.workflowsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .workflowsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .workflowsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.workflowCard {
+  background-color: rgba(2, 31, 61, 0.7);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  position: relative;
+}
+
+.workflowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.workflowName {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #00ffff;
+}
+
+.workflowStatus {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.active {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: rgb(16, 185, 129);
+}
+
+.inactive {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: rgb(245, 158, 11);
+}
+
+.error {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: rgb(239, 68, 68);
+}
+
+.workflowStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.workflowStat {
+  display: flex;
+  flex-direction: column;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: rgba(224, 242, 254, 0.6);
+  margin-bottom: 0.25rem;
+}
+
+.statValue {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(224, 242, 254, 0.9);
+}
+
+.workflowActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.n8nInfo {
+  background-color: rgba(2, 31, 61, 0.7);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  border-radius: 0.75rem;
+}
+
+.n8nInfo h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.9);
+  margin-bottom: 1rem;
+}
+
+.n8nInfo p {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}

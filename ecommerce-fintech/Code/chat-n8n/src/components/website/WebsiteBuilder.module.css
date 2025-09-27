@@ -1,0 +1,374 @@
+/* WebsiteBuilder.module.css */
+
+.websiteBuilderContainer {
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.websiteHeader {
+  background-color: rgba(2, 31, 61, 0.7);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.websiteTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.websiteSubtitle {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.websiteActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.9);
+  margin-bottom: 1.5rem;
+}
+
+/* Template section */
+.templateSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.templatesGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .templatesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .templatesGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.templateCard {
+  background-color: rgba(2, 31, 61, 0.7);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.templateCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.templateCardSelected {
+  border-color: #00ffff;
+  box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+}
+
+.templateIcon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.templateTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.templateDescription {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.templateFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.templateFeature {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.6);
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+}
+
+.templateFeatureIcon {
+  color: #00ffff;
+  margin-right: 0.5rem;
+}
+
+.templateSelectedBadge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background-color: rgba(0, 255, 255, 0.2);
+  color: #00ffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+/* Features section */
+.featuresSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .featuresGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .featuresGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.featureCard {
+  background-color: rgba(2, 31, 61, 0.7);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.featureIcon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.featureTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.featureDescription {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+}
+
+/* CTA Section */
+.ctaSection {
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+.ctaCard {
+  background-color: rgba(2, 31, 61, 0.7);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ctaTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00ffff;
+  margin-bottom: 1rem;
+}
+
+.ctaDescription {
+  font-size: 1rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1.5rem;
+  max-width: 600px;
+}
+
+/* Modal styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: #001a36;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(10, 51, 92, 0.8);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 500px;
+  position: relative;
+  overflow: hidden;
+}
+
+.modalClose {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(1, 21, 41, 0.3);
+  border: none;
+  color: rgba(224, 242, 254, 0.7);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modalClose:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.modalHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(10, 51, 92, 0.6);
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #00ffff;
+}
+
+.modalContent {
+  padding: 1.5rem;
+}
+
+.formField {
+  margin-bottom: 1.5rem;
+}
+
+.formField label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.textInput {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: rgba(1, 21, 41, 0.3);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  border-radius: 0.375rem;
+  color: white;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: #00ffff;
+}
+
+.templatePreview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: rgba(1, 21, 41, 0.3);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 0.375rem;
+}
+
+.templatePreviewIcon {
+  font-size: 1.5rem;
+}
+
+.templatePreviewName {
+  font-size: 0.875rem;
+  color: #00ffff;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* Success state */
+.demoSuccess {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.demoSuccessIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.demoSuccessTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.demoSuccessText {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1.5rem;
+}
+
+.demoSuccessActions {
+  display: flex;
+  gap: 1rem;
+}

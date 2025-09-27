@@ -1,0 +1,158 @@
+.button {
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition-property: color, background-color, border-color;
+  transition-duration: 150ms;
+}
+
+.buttonPrimary {
+  background-color: #00ffff;
+  color: #001f3f;
+}
+.buttonPrimary:hover {
+  background-color: rgba(0, 255, 255, 0.9);
+}
+.buttonPrimary:focus {
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0
+    var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0
+    calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
+    var(--tw-shadow, 0 0 #0000);
+  --tw-ring-color: rgba(0, 255, 255, 0.5);
+}
+
+.buttonSecondary {
+  background-color: #001f3f;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: #00ffff;
+}
+.buttonSecondary:hover {
+  background-color: rgba(0, 31, 63, 0.8);
+}
+
+.buttonOutline {
+  background-color: transparent;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: #00ffff;
+}
+.buttonOutline:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.buttonSm {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.buttonMd {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+}
+
+.buttonLg {
+  font-size: 1rem;
+  padding: 0.625rem 1.25rem;
+}
+
+.buttonDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badgeDefault {
+  background-color: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.card {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  background-color: rgba(2, 31, 61, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.cardNoPadding {
+  padding: 0;
+}
+
+.cardSmallPadding {
+  padding: 0.5rem;
+}
+
+.cardNormalPadding {
+  padding: 1rem;
+}
+
+.cardLargePadding {
+  padding: 1.5rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.cardTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(224, 242, 254);
+  letter-spacing: 0.025em;
+}
+
+@media (min-width: 768px) {
+  .cardTitle {
+    font-size: 1rem;
+  }
+}
+
+.cardSubtitle {
+  font-size: 0.75rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-top: 0.125rem;
+}
+
+@media (min-width: 768px) {
+  .cardSubtitle {
+    font-size: 0.875rem;
+  }
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.5rem;
+  background-color: #001f3f;
+  border: 1px solid #0a335c;
+  padding: 0.5rem 0.75rem;
+  color: white;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 255, 255, 0.5);
+}
+
+.inputDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -1,0 +1,104 @@
+.chatInputContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(10, 51, 92, 0.6);
+  padding: 1rem;
+  background-color: #001a36;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  z-index: 10;
+}
+
+.chatTextarea {
+  flex: 1;
+  resize: none;
+  background-color: #001f3f;
+  border-radius: 0.5rem;
+  border: 1px solid #0a335c;
+  padding: 0.75rem;
+  color: white;
+  min-height: 44px;
+  max-height: 120px;
+}
+
+.chatTextarea::placeholder {
+  color: #9ca3af;
+}
+
+.chatTextarea:focus {
+  outline: none;
+  border-color: rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 255, 255, 0.5);
+}
+
+.chatTextareaDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chatHistoryContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: calc(
+    100vh - 150px
+  ); /* Set a max height to ensure it doesn't push input off screen */
+}
+
+.chatMessageContainer {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+.chatMessageUser {
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+.chatMessageAssistant {
+  align-items: flex-start;
+  margin-right: auto;
+}
+
+.chatMessageBubble {
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.chatMessageBubbleUser {
+  background-color: rgba(0, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.chatMessageBubbleAssistant {
+  background-color: rgba(2, 31, 61, 0.8);
+  color: white;
+  border: 1px solid rgba(10, 51, 92, 0.6);
+}
+
+.chatMessageRole {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.chatMessageContent {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chatMessageTime {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+  padding: 0 0.25rem;
+}

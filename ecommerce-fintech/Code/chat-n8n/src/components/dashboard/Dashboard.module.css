@@ -1,0 +1,332 @@
+/* Dashboard.module.css */
+.dashboardContainer {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 3rem;
+  position: relative;
+}
+
+.dashboardHeader {
+  background-color: rgba(2, 31, 61, 0.7);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dashboardTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.dashboardSubtitle {
+  font-size: 0.875rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.dashboardActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .metricsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .actionsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metricsCard {
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  background-color: rgba(2, 31, 61, 0.7);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2),
+    0 4px 6px -2px rgba(0, 0, 0, 0.1);
+}
+
+.metricsCardContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.metricsIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background-color: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+}
+
+.metricsTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 0.25rem;
+}
+
+.metricsValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #00ffff;
+  margin-bottom: 0.25rem;
+}
+
+.metricsSubtitle {
+  font-size: 0.75rem;
+  color: rgba(224, 242, 254, 0.5);
+}
+
+.metricsTrend {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.trendUp {
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.trendDown {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.chartCard {
+  width: 100%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  background-color: rgba(2, 31, 61, 0.7);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+}
+
+.chartTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.chartContainer {
+  position: relative;
+  width: 100%;
+  background-color: rgba(1, 21, 41, 0.3);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid rgba(10, 51, 92, 0.3);
+}
+
+.chartPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: rgba(224, 242, 254, 0.5);
+  padding: 1rem;
+}
+
+.chartPlaceholderText {
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  color: rgba(224, 242, 254, 0.3);
+}
+
+.quickActions {
+  height: 100%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  background-color: rgba(2, 31, 61, 0.7);
+}
+
+.quickActionsTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.quickActionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quickActionItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: rgba(1, 21, 41, 0.3);
+  border: 1px solid rgba(10, 51, 92, 0.3);
+  transition: background-color 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.quickActionItem:hover {
+  background-color: rgba(0, 255, 255, 0.05);
+  transform: translateX(2px);
+}
+
+.quickActionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background-color: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+}
+
+.quickActionTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.9);
+  margin-bottom: 0.25rem;
+}
+
+.quickActionDescription {
+  font-size: 0.75rem;
+  color: rgba(224, 242, 254, 0.5);
+}
+
+.recentActivityCard {
+  height: 100%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(10, 51, 92, 0.6);
+  background-color: rgba(2, 31, 61, 0.7);
+}
+
+.recentActivityTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 1rem;
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: rgba(1, 21, 41, 0.3);
+  border: 1px solid rgba(10, 51, 92, 0.3);
+}
+
+.activityIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background-color: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+  flex-shrink: 0;
+}
+
+.activityContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.activityDescription {
+  font-size: 0.75rem;
+  color: rgba(224, 242, 254, 0.7);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityTime {
+  font-size: 0.6875rem;
+  color: rgba(224, 242, 254, 0.4);
+}
+
+.activityValue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.noActivity {
+  padding: 1rem;
+  text-align: center;
+  color: rgba(224, 242, 254, 0.5);
+}
