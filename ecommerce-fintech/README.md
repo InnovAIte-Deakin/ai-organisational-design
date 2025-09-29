@@ -12,7 +12,7 @@ The AI Co-founder is an ethical AI assistant designed specifically for solo entr
 
 The platform integrates various specialized AI agents through a chat interface similar to ChatGPT, allowing entrepreneurs to manage all operations via natural language commands. These agents handle specific functions like Cart Recovery, Inventory Management, SEO/Content Creation, and Marketing, enabling automation of repetitive tasks while maintaining human-in-the-loop oversight.
 
-![AI Co-founder Dashboard](https://via.placeholder.com/800x400?text=AI+Co-founder+Dashboard)
+![AI Co-founder Dashboard](/Documents/Dashboard.png
 
 ## Core Features
 
@@ -362,5 +362,5 @@ The AI Co-founder project aims to deliver significant business value for solo en
 
 ## Contact
 
-Email - team@ai-cofounder.com
-GitHub - [@ai-cofounder-team](https://github.com/ai-cofounder-team)
+Email - innovaitedeakinai@gmail.com
+GitHub - [@ai-cofounder-team](https://github.com/InnovAIte-Deakin)
